@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Satellite Collision Watch</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Source+Sans+3:wght@400;500;600&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a space-traffic operations desk: calm, exact, alarm used sparingly.
+   IDEA: the conjunction bulletin, where every close pass is a dated, measured event and each one can be acted on.
+   PICTURE: Earth at night-side light with twelve thousand live satellites; the chosen pair's two orbits drawn and the crossing point marked.
+   COLOUR and TYPE: deep space graphite with Earth's own ocean and land; pale sand text, sea-glass for orbits and plans, coral for danger. Manrope headings, Source Sans 3 text, Spline Sans Mono figures.
+   LAYOUT: globe stage with an upcoming-passes rail; other views are bulletins: table, encounter sheet with the manoeuvre planner, one-satellite check. */
+:root{color-scheme:dark;--bg:#0c0f13;--panel:#141920;--panel2:#1a2029;--ink:#ece8df;--mute:#9aa3ad;--line:#262e38;--glass:#8fd3c7;--coral:#ff6b5b;--sand:#e9d6b0;--gold:#f0c060}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Source Sans 3",system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3,.brand,nav a,button{font-family:Manrope,"Source Sans 3",sans-serif}
+.mono,.num{font-family:"Spline Sans Mono",monospace;font-variant-numeric:tabular-nums}
+header{position:sticky;top:0;z-index:20;background:rgba(12,15,19,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:0 max(2vw,14px);min-height:58px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:18px;display:flex;align-items:center;gap:10px}
+.clockbar{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--mute)}
+.clockbar b{color:var(--ink);font:500 14px "Spline Sans Mono";white-space:nowrap}
+nav{display:flex;gap:2px;margin-left:auto;flex-wrap:wrap}
+nav a{color:var(--mute);text-decoration:none;font-weight:600;font-size:15px;padding:8px 12px;border-radius:10px;min-height:40px;display:flex;align-items:center;transition:background .2s,color .2s}
+nav a:hover{color:var(--ink)}nav a.on{color:var(--bg);background:var(--sand)}
+.view{display:none}.view.on{display:block;animation:vin .5s cubic-bezier(.2,.8,.2,1)}
+@keyframes vin{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+#watch.on{display:grid}
+#watch{grid-template-columns:minmax(0,1fr) 380px;height:calc(100vh - 58px);min-height:600px}
+.stage{position:relative;overflow:hidden;background:radial-gradient(ellipse at 30% 40%,#141c26 0,#0c0f13 60%)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+.over{position:absolute;pointer-events:none}
+.hero{left:0;top:0;padding:18px 20px 40px;max-width:min(640px,86%);background:radial-gradient(ellipse at 0 0,rgba(12,15,19,.92) 0,rgba(12,15,19,.6) 45%,transparent 72%);text-shadow:0 1px 8px rgba(0,0,0,.8)}
+.hero h1{margin:0;font-size:clamp(26px,3.2vw,40px);line-height:1.08;text-wrap:balance}
+.hero p{margin:6px 0 0;color:var(--mute);font-size:15px}
+.keys{left:20px;bottom:18px;max-width:calc(100% - 290px);display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mute);background:rgba(12,15,19,.7);padding:8px 12px;border-radius:12px}
+.keys i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.timectl{right:16px;bottom:16px;pointer-events:auto;display:flex;gap:6px;background:rgba(20,25,32,.9);border:1px solid var(--line);padding:5px;border-radius:12px}
+.timectl button{background:none;border:0;color:var(--mute);font-weight:700;font-size:14px;padding:7px 11px;border-radius:8px;min-height:38px;cursor:pointer}
+.timectl button.on{background:var(--panel2);color:var(--ink)}
+.selcard{right:16px;top:16px;pointer-events:auto;width:min(340px,calc(100% - 32px));background:rgba(20,25,32,.94);border:1px solid var(--line);border-radius:16px;padding:14px 16px;opacity:0;transform:translateY(-6px);transition:opacity .3s,transform .3s}
+.selcard.show{opacity:1;transform:none}
+.selcard h3{margin:0 0 2px;font-size:17px;line-height:1.25}
+.selcard .sub{color:var(--mute);font-size:14px}
+.fig3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:10px 0}
+.fig3 div{font-size:12px;color:var(--mute)}.fig3 b{display:block;font:500 17px "Spline Sans Mono";color:var(--ink);white-space:nowrap}
+.btn{font-weight:700;font-size:15px;border:0;border-radius:11px;padding:9px 15px;min-height:44px;cursor:pointer;background:var(--sand);color:#151515;transition:transform .15s}
+.btn:hover{transform:translateY(-1px)}.btn.ghost{background:var(--panel2);color:var(--ink);border:1px solid var(--line)}.btn.danger{background:var(--coral);color:#1a0d0b}
+.btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+:focus-visible{outline:3px solid var(--glass);outline-offset:2px}
+.rail{background:var(--panel);border-left:1px solid var(--line);display:grid;grid-template-rows:auto minmax(0,1fr);min-height:0}
+.rail .hd{padding:16px 16px 10px;border-bottom:1px solid var(--line)}
+.rail h2{margin:0;font-size:18px}
+.rail .hd p{margin:2px 0 0;color:var(--mute);font-size:14px}
+.list{overflow-y:auto;padding:8px}
+.ev{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 12px;border-radius:12px;cursor:pointer;border:1px solid transparent;transition:background .2s,border-color .2s;animation:vin .35s both}
+.ev:hover{background:var(--panel2)}.ev.on{border-color:var(--glass);background:var(--panel2)}
+.ev .n{font-weight:600;font-size:15px;line-height:1.3;overflow:hidden;text-overflow:ellipsis}
+.ev .m{font:500 15px "Spline Sans Mono";text-align:right;white-space:nowrap}
+.ev .m.close{color:var(--coral)}
+.ev .s{font-size:13px;color:var(--mute)}.ev .c{font:400 13px "Spline Sans Mono";color:var(--mute);text-align:right;white-space:nowrap}
+.sheet{max-width:1240px;margin:0 auto;padding:clamp(22px,4vw,48px) max(4vw,16px) 64px}
+.sheet h1{font-size:clamp(28px,4.2vw,46px);line-height:1.08;margin:0 0 8px;text-wrap:balance}
+.lede{color:var(--mute);max-width:70ch;margin:0 0 22px}
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 18px}
+.stats div{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stats span{display:block;color:var(--mute);font-size:14px}.stats b{font:500 26px/1.2 "Spline Sans Mono";white-space:nowrap}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 18px}
+.card h2{font-size:19px;margin:0 0 2px}.card .sub{color:var(--mute);font-size:14px;margin:0 0 10px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fig{position:relative;min-height:270px}.fig>svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.fig text{font:13px "Source Sans 3";fill:var(--mute)}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+label{display:grid;gap:4px;font-size:14px;color:var(--mute)}
+input,select{font:16px "Source Sans 3";color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:9px 12px;min-height:44px}
+input[type=range]{padding:0;accent-color:#8fd3c7;background:none;border:0;min-height:30px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{text-align:left;color:var(--mute);font-weight:500;padding:8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap;user-select:none}
+th.r,td.r{text-align:right}
+td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.nm{white-space:normal;min-width:180px}
+tbody tr{cursor:pointer;transition:background .15s}tbody tr:hover{background:var(--panel2)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:999px;background:var(--panel2);color:var(--mute);border:1px solid var(--line);white-space:nowrap}
+.tag.x{color:var(--gold);border-color:#5b4a22}
+.star{background:none;border:0;color:var(--mute);font-size:22px;cursor:pointer;min-height:44px;min-width:44px;border-radius:10px}#encStar{border:1px solid var(--line);margin-top:8px}.star.on{color:var(--gold)}
+.scroll{overflow-x:auto}
+.plan{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}.seg button{background:var(--panel2);border:0;color:var(--mute);font-weight:600;font-size:14px;padding:8px 10px;min-height:44px;cursor:pointer;flex:1}.seg button.on{background:var(--sand);color:#151515}
+.result{margin-top:14px;padding:14px 16px;border-radius:14px;background:var(--panel2);display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+.result b{font:500 24px "Spline Sans Mono"}.result span{color:var(--mute);font-size:14px;display:block}
+.result .ok{color:var(--glass)}.result .bad{color:var(--coral)}
+.prog{height:8px;border-radius:4px;background:var(--panel2);overflow:hidden;margin:10px 0}.prog i{display:block;height:100%;background:var(--glass);width:0;transition:width .2s}
+.sugg{position:absolute;z-index:5;background:var(--panel2);border:1px solid var(--line);border-radius:12px;margin-top:4px;width:100%;max-height:280px;overflow:auto;display:none}
+.sugg button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;background:none;border:0;color:var(--ink);padding:10px 12px;font:15px "Source Sans 3";cursor:pointer;min-height:42px}.sugg button:hover{background:var(--panel)}
+.sugg span{color:var(--mute);font-size:13px}
+.prose{max-width:74ch}.prose h2{font-size:24px;margin:28px 0 6px}.prose p{margin:0 0 12px}
+.empty{color:var(--mute);padding:18px 4px}
+.fchip{display:inline-flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:6px 8px 6px 14px;font-size:14px;animation:vin .3s both}.fchip button{background:none;border:0;color:var(--mute);font-size:18px;cursor:pointer;min-height:30px;min-width:30px}
+#alertbar{position:sticky;top:58px;z-index:19;background:#3a1611;color:#ffd9d3;border-bottom:1px solid #6b2a20;padding:8px max(2vw,14px);font-size:15px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;animation:vin .4s both}#alertbar[hidden]{display:none}#alertbar b{color:#fff}#alertbar button{background:#ff6b5b;color:#1a0d0b;border:0;border-radius:9px;font-weight:700;padding:6px 12px;min-height:36px;cursor:pointer}
+.loading{position:fixed;inset:0;display:grid;place-items:center;background:var(--bg);z-index:60;transition:opacity .5s}
+.loading.hide{opacity:0;pointer-events:none}
+.loading div{text-align:center;color:var(--mute)}
+.orbit{width:64px;height:64px;margin:0 auto 14px;border-radius:50%;border:2px solid var(--line);position:relative;animation:spin 1.6s linear infinite}
+.orbit::after{content:"";position:absolute;width:10px;height:10px;border-radius:50%;background:var(--glass);top:-6px;left:50%;margin-left:-5px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:1000px){#watch{grid-template-columns:1fr;height:auto}.stage{height:62vh;min-height:380px}.rail{border-left:0;border-top:1px solid var(--line)}.list{max-height:60vh}.g2{grid-template-columns:1fr}.plan{grid-template-columns:repeat(2,minmax(0,1fr))}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.keys{display:none}nav{margin-left:0}nav a{padding:6px 8px;font-size:14px}.clockbar{display:none}.hero h1{font-size:24px}.selcard{top:auto;bottom:62px;padding:10px 12px}.selcard .fig3{display:none}.selcard .btn{min-height:40px;padding:7px 12px;font-size:14px}
+table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8em;text-align:start;white-space:normal}.stack td::before{content:attr(data-l);float:inline-start;width:7.5em;margin-inline-start:-8em;color:var(--mute)}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<div class="loading" id="loading"><div><div class="orbit"></div>Loading 18,524 tracked objects…</div></div>
+<header>
+  <div class="brand"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><circle cx="13" cy="13" r="6" fill="#2f6f8f"/><ellipse cx="13" cy="13" rx="12" ry="5" fill="none" stroke="#8fd3c7" stroke-width="1.6" transform="rotate(-25 13 13)"/><ellipse cx="13" cy="13" rx="12" ry="5" fill="none" stroke="#ff6b5b" stroke-width="1.6" transform="rotate(35 13 13)"/></svg>Satellite Collision Watch</div>
+  <div class="clockbar">Sim time <b id="clk">–</b></div>
+  <nav id="nav"><a href="#watch">Watch</a><a href="#conjunctions">All passes</a><a href="#encounter">Encounter</a><a href="#check">Check a satellite</a><a href="#fleet">My fleet</a><a href="#watchlist">Watchlist</a><a href="#method">How it works</a></nav>
+</header>
+<div id="alertbar" hidden></div>
+<main>
+<section class="view" id="watch">
+  <div class="stage" id="stage"><canvas id="gl" aria-label="Globe with every tracked active satellite"></canvas>
+    <div class="over hero"><h1 id="heroT">Close passes in the next 24 hours</h1><p id="heroS"></p></div>
+    <div class="over selcard" id="selcard"></div>
+    <div class="over keys" id="keys"></div>
+    <div class="over timectl" id="timectl" role="group" aria-label="Time speed"><button data-v="1" class="on">Live</button><button data-v="60">60×</button><button data-v="600">600×</button></div>
+  </div>
+  <aside class="rail"><div class="hd"><h2>Next close passes</h2><p id="railSub">Closest first, from the sim clock onward</p></div><div class="list" id="list"></div></aside>
+</section>
+
+<section class="view" id="conjunctions"><div class="sheet">
+  <h1 id="cjTitle">Every predicted pass under 1 km</h1>
+  <p class="lede" id="cjLede"></p>
+  <div class="stats" id="cjStats"></div>
+  <div class="filters">
+    <label>Search<input id="fq" placeholder="Name or catalogue number"></label>
+    <label>Who<select id="fk"><option value="all">All pairs</option><option value="mixed">Starlink and another operator</option><option value="ss">Starlink and Starlink</option><option value="debris">Involves debris</option><option value="other">Neither is Starlink</option></select></label>
+    <label>Closer than <span class="mono" id="fmV">1000 m</span><input type="range" id="fm" min="20" max="1000" step="10" value="1000"></label>
+  </div>
+  <div class="card"><div class="scroll"><table class="stack" id="cjTable"></table></div><div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" id="more">Show more</button><button class="btn ghost dl" id="cjCsv" hidden>Download these as CSV</button></div></div>
+</div></section>
+
+<section class="view" id="encounter"><div class="sheet">
+  <div id="encEmpty" class="empty">Pick a pass from the Watch view or the table to open it here.</div>
+  <div id="enc" hidden>
+    <div style="display:flex;gap:10px;align-items:start;justify-content:space-between"><h1 id="encTitle" style="flex:1"></h1><div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost dl" id="encPdf" hidden>Download report (PDF)</button><button class="star" id="encStar" title="Add to watchlist" aria-label="Add to watchlist" style="margin-top:0">★</button></div></div>
+    <p class="lede" id="encLede"></p>
+    <div class="stats" id="encStats"></div>
+    <p class="lede" style="font-size:14px;margin-top:-10px">*Assumes 1 km of orbit uncertainty per object and a 10 m combined size. Public elements carry no real uncertainty, so this ranks passes roughly and nothing more.</p>
+    <div class="g2">
+      <div class="card"><h2>Separation around closest approach</h2><p class="sub">Distance between the two on a log scale, propagated live with SGP4, 15 minutes either side</p><div class="fig"><svg id="chSep"></svg></div></div>
+      <div class="card"><h2>Where the other one passes</h2><p class="sub" id="geoSub">Offset from the first satellite at closest approach, seen along its flight path</p><div class="fig"><svg id="chGeo"></svg></div></div>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h2>Plan an avoidance burn</h2><p class="sub">A small push along the direction of flight, made some orbits ahead, changes where the satellite is at the crossing. Solved with Clohessy–Wiltshire relative motion.</p>
+      <div class="plan">
+        <label>Which one moves<div class="seg" id="pWho"><button data-v="0" class="on">First</button><button data-v="1">Second</button></div></label>
+        <label>Burn ahead of the pass<select id="pLead"><option value="0.5">Half an orbit</option><option value="1" selected>1 orbit</option><option value="2">2 orbits</option><option value="3">3 orbits</option></select></label>
+        <label>Push <span class="mono" id="pDvV">5.0 cm/s</span><input type="range" id="pDv" min="-30" max="30" step="0.5" value="5"></label>
+        <label>Safe distance<select id="pSafe"><option value="1">1 km</option><option value="2" selected>2 km</option><option value="5">5 km</option></select></label>
+      </div>
+      <div class="result" id="pRes"></div>
+      <div class="fig" style="min-height:220px;margin-top:10px"><svg id="chDv"></svg></div>
+    </div>
+  </div>
+</div></section>
+
+<section class="view" id="check"><div class="sheet">
+  <h1>Screen one satellite against the whole catalogue</h1>
+  <p class="lede">Pick any satellite. Your browser propagates it and every object that shares its altitude band, then finds each pass closer than the limit. This runs live, on this device.</p>
+  <div class="filters">
+    <label style="position:relative;flex:1;min-width:240px">Satellite<input id="cq" placeholder="Try ISS, CSS (TIANHE), NOAA 20 or STARLINK-1008" autocomplete="off"><div class="sugg" id="sugg"></div></label>
+    <label>Window<select id="cw"><option value="3">3 hours</option><option value="6" selected>6 hours</option><option value="12">12 hours</option><option value="24">24 hours</option></select></label>
+    <label>Closer than<select id="cl"><option value="2">2 km</option><option value="5" selected>5 km</option><option value="10">10 km</option><option value="25">25 km</option></select></label>
+    <button class="btn" id="cgo" disabled>Screen it</button>
+  </div>
+  <div id="cstat" class="lede" style="margin:0"></div><div class="prog" id="cprog" hidden><i></i></div>
+  <div class="card" id="cres" hidden><div class="scroll"><table class="stack" id="cTable"></table></div><div style="margin-top:12px"><button class="btn ghost dl" id="cCsv" hidden>Download as CSV</button></div></div>
+</div></section>
+
+<section class="view" id="fleet"><div class="sheet">
+  <h1 id="flTitle">Watch your own satellites</h1>
+  <p class="lede">Add the satellites you operate or care about. Their passes from the full screen show here with a live countdown, and anything inside the next hour under 5 km raises an alert at the top of every page. Run a wider screen for the whole fleet at any distance you choose.</p>
+  <div class="filters">
+    <label style="position:relative;flex:1;min-width:240px">Add a satellite<input id="fq2" placeholder="Name or catalogue number" autocomplete="off"><div class="sugg" id="sugg2"></div></label>
+    <label>Screen out to<select id="fl2"><option value="2">2 km</option><option value="5" selected>5 km</option><option value="10">10 km</option></select></label>
+    <label>Over<select id="fw2"><option value="6">6 hours</option><option value="12" selected>12 hours</option><option value="24">24 hours</option></select></label>
+    <button class="btn" id="flGo" disabled>Screen my fleet</button>
+  </div>
+  <div class="chips" id="flChips" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <div id="flStat" class="lede" style="margin:0"></div><div class="prog" id="flProg" hidden><i></i></div>
+  <div class="card"><div class="scroll"><table class="stack" id="flTable"></table></div><div style="margin-top:12px"><button class="btn ghost dl" id="flCsv" hidden>Download as CSV</button></div></div>
+</div></section>
+
+<section class="view" id="watchlist"><div class="sheet">
+  <h1 id="wlTitle">Watchlist</h1>
+  <p class="lede">Passes you starred, with a live countdown. Kept in this browser.</p>
+  <div class="card"><div class="scroll"><table class="stack" id="wlTable"></table></div></div>
+</div></section>
+
+<section class="view" id="method"><div class="sheet prose">
+  <h1>How twelve thousand satellites get screened</h1>
+  <p class="lede">The same three steps a space-traffic team runs, on public data: propagate every orbit, sieve for pairs that come near each other, then measure each near miss precisely.</p>
+  <h2>The data</h2>
+  <p id="mData"></p>
+  <h2>Propagation</h2>
+  <p>Each two-line element set is turned into a position and velocity at any moment with SGP4, the standard model these elements are published for. It includes Earth's flattening and a simple drag model. Typical error for public elements is around a kilometre, so treat any pass under that as "close enough to look at", not a certainty.</p>
+  <h2>The sieve</h2>
+  <p>Comparing every pair (73 million of them) at every moment is too slow. Instead, every 20 seconds all satellites are dropped into a 3-D grid of cubes about 175 km across. Only satellites in the same or neighbouring cubes are compared. For each such pair the straight-line relative motion over that 20 s gives the closest distance; pairs under three times the threshold go on for refinement. Pairs moving together at under 100 m/s, such as freshly launched batches, are counted as formation flying and set aside. The sieve was checked against a 5-second scan and missed nothing.</p>
+  <h2>Refinement</h2>
+  <p>For each candidate, a golden-section search on full SGP4 positions finds the time of closest approach to within milliseconds and the miss distance to within a centimetre of a brute-force scan. The miss is broken into radial, along-track and cross-track parts in the first satellite's frame.</p>
+  <h2>Risk and the burn planner</h2>
+  <p>Collision probability needs the orbit uncertainty, which public elements don't carry. The figure shown assumes 1 km of uncertainty per object and a combined size of 10 m, so read it as a ranking aid. The burn planner uses Clohessy–Wiltshire equations: a push along the flight direction raises the orbit and, over time, slides the satellite along its track by about three times the push multiplied by the time before the pass.</p>
+  <h2>The one-satellite check</h2>
+  <p>The check runs the same sieve in a background thread in your browser, limited to objects whose perigee and apogee overlap the chosen satellite's, which is what keeps it fast.</p>
+</div></section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script type="text/plain" id="screen-src">// Conjunction screening: SGP4 propagation, spatial hashing sieve, closest-approach refinement.
+// Expects global `satellite` (satellite.js).
+const RE = 6378.135;
+function makeRecs(cat) {
+  return cat.map(([name, l1, l2, group], i) => {
+    const s = satellite.twoline2satrec(l1, l2);
+    const a = s.a * RE, e = s.ecco;
+    return { i, name, group, id: l1.slice(2, 7).trim(), s, perigee: a * (1 - e) - RE, apogee: a * (1 + e) - RE, periodMin: 2 * Math.PI / s.no };
+  });
+}
+function posvel(rec, date) {
+  const pv = satellite.propagate(rec.s, date);
+  if (!pv.position || isNaN(pv.position.x)) return null;
+  return pv;
+}
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+// refine closest approach between two satellites near tGuess (ms), searching +-win seconds
+function refine(A, B, tGuess, win) {
+  const f = t => { const a = posvel(A, new Date(t)), b = posvel(B, new Date(t)); return a && b ? dist(a.position, b.position) : 1e9; };
+  let lo = tGuess - win * 1000, hi = tGuess + win * 1000; const g = 0.6180339887;
+  let c = hi - g * (hi - lo), d = lo + g * (hi - lo), fc = f(c), fd = f(d);
+  for (let k = 0; k < 40; k++) { if (fc < fd) { hi = d; d = c; fd = fc; c = hi - g * (hi - lo); fc = f(c); } else { lo = c; c = d; fc = fd; d = lo + g * (hi - lo); fd = f(d); } }
+  const t = (lo + hi) / 2, a = posvel(A, new Date(t)), b = posvel(B, new Date(t));
+  if (!a || !b) return null;
+  return { t, miss: dist(a.position, b.position), a, b };
+}
+// relative geometry in the primary's radial / along-track / cross-track frame
+function rtn(a, b) {
+  const r = a.position, v = a.velocity;
+  const nr = Math.hypot(r.x, r.y, r.z), R = [r.x / nr, r.y / nr, r.z / nr];
+  const h = [r.y * v.z - r.z * v.y, r.z * v.x - r.x * v.z, r.x * v.y - r.y * v.x], nh = Math.hypot(...h), N = h.map(q => q / nh);
+  const T = [N[1] * R[2] - N[2] * R[1], N[2] * R[0] - N[0] * R[2], N[0] * R[1] - N[1] * R[0]];
+  const d = [b.position.x - r.x, b.position.y - r.y, b.position.z - r.z];
+  const dv = [b.velocity.x - v.x, b.velocity.y - v.y, b.velocity.z - v.z];
+  const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+  return { radial: dot(d, R), along: dot(d, T), cross: dot(d, N), vrel: Math.hypot(...dv), alt: nr - RE, speed: Math.hypot(v.x, v.y, v.z) };
+}
+// rough collision probability: isotropic 2-D Gaussian in the encounter plane
+function pcEstimate(missKm, sigmaKm, hbrKm) { const s2 = 2 * sigmaKm * sigmaKm; return (hbrKm * hbrKm / s2) * Math.exp(-(missKm * missKm) / s2); }
+
+// Screen `subject` indices (or all) against the whole catalogue.
+// opts: {t0 (ms), hours, step (s), thresh (km), subject: array|null, onProgress}
+function screen(recs, opts) {
+  const { t0, hours, step, thresh } = opts;
+  const subject = opts.subject ? new Set(opts.subject) : null;
+  // altitude-band prefilter for one-vs-all screening
+  let pool = recs;
+  if (subject) {
+    const subs = recs.filter(r => subject.has(r.i));
+    pool = recs.filter(r => subject.has(r.i) || subs.some(s => r.perigee - thresh - 20 < s.apogee && s.perigee - thresh - 20 < r.apogee));
+  }
+  const steps = Math.ceil(hours * 3600 / step);
+  const vmax = 16; // km/s, upper bound on relative speed
+  const C = vmax * step / 2 + thresh + 5;
+  const cand = new Map();
+  const P = new Float64Array(pool.length * 6), ok = new Uint8Array(pool.length);
+  for (let k = 0; k <= steps; k++) {
+    const t = t0 + k * step * 1000, date = new Date(t);
+    for (let j = 0; j < pool.length; j++) { const pv = posvel(pool[j], date); if (!pv) { ok[j] = 0; continue; } ok[j] = 1; const o = j * 6; P[o] = pv.position.x; P[o + 1] = pv.position.y; P[o + 2] = pv.position.z; P[o + 3] = pv.velocity.x; P[o + 4] = pv.velocity.y; P[o + 5] = pv.velocity.z; }
+    const grid = new Map();
+    const key = (x, y, z) => (x + 512) * 1048576 + (y + 512) * 1024 + (z + 512);
+    for (let j = 0; j < pool.length; j++) { if (!ok[j]) continue; const o = j * 6; const kx = Math.floor(P[o] / C), ky = Math.floor(P[o + 1] / C), kz = Math.floor(P[o + 2] / C); const kk = key(kx, ky, kz); let a = grid.get(kk); if (!a) grid.set(kk, a = []); a.push(j); }
+    for (const [kk, arr] of grid) {
+      const kx = Math.floor(kk / 1048576) - 512, ky = Math.floor((kk % 1048576) / 1024) - 512, kz = kk % 1024 - 512;
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+        const other = grid.get(key(kx + dx, ky + dy, kz + dz)); if (!other) continue;
+        for (const a of arr) for (const b of other) {
+          if (b <= a) continue;
+          const A = pool[a], B = pool[b];
+          if (subject && !subject.has(A.i) && !subject.has(B.i)) continue;
+          const oa = a * 6, ob = b * 6;
+          const rx = P[ob] - P[oa], ry = P[ob + 1] - P[oa + 1], rz = P[ob + 2] - P[oa + 2];
+          const vx = P[ob + 3] - P[oa + 3], vy = P[ob + 4] - P[oa + 4], vz = P[ob + 5] - P[oa + 5];
+          const vv = vx * vx + vy * vy + vz * vz;
+          let tau = vv > 1e-9 ? -(rx * vx + ry * vy + rz * vz) / vv : 0; tau = Math.max(-step / 2, Math.min(step / 2, tau));
+          const mx = rx + vx * tau, my = ry + vy * tau, mz = rz + vz * tau, md = Math.sqrt(mx * mx + my * my + mz * mz);
+          if (md < thresh * 3) {
+            const pk = A.i < B.i ? A.i + ':' + B.i : B.i + ':' + A.i;
+            const tg = t + tau * 1000, prev = cand.get(pk);
+            if (!prev) cand.set(pk, [{ tg, md, vrel: Math.sqrt(vv) }]);
+            else { const last = prev[prev.length - 1]; if (Math.abs(last.tg - tg) < step * 1500) { if (md < last.md) { last.tg = tg; last.md = md; } } else prev.push({ tg, md, vrel: Math.sqrt(vv) }); }
+          }
+        }
+      }
+    }
+    if (opts.onProgress && k % 20 === 0) opts.onProgress(k / steps, cand.size);
+  }
+  // refine
+  const events = []; let formation = 0;
+  for (const [pk, list] of cand) {
+    const [ia, ib] = pk.split(':').map(Number), A = recs[ia], B = recs[ib];
+    for (const c of list) {
+      if (c.vrel < 0.1) { formation++; continue; } // flying together, not a crossing
+      const r = refine(A, B, c.tg, step); if (!r || r.miss > thresh) continue;
+      const g = rtn(r.a, r.b);
+      events.push({ a: ia, b: ib, t: r.t, miss: r.miss, vrel: g.vrel, radial: g.radial, along: g.along, cross: g.cross, alt: g.alt, pc: pcEstimate(r.miss, 1.0, 0.01) });
+    }
+  }
+  events.sort((x, y) => x.miss - y.miss);
+  return { events, formation, candidates: cand.size, pool: pool.length };
+}
+if (typeof module !== 'undefined') module.exports = { makeRecs, screen, refine, rtn, posvel, pcEstimate, RE };
+</script>
+<script>
+// Conjunction screening: SGP4 propagation, spatial hashing sieve, closest-approach refinement.
+// Expects global `satellite` (satellite.js).
+const RE = 6378.135;
+function makeRecs(cat) {
+  return cat.map(([name, l1, l2, group], i) => {
+    const s = satellite.twoline2satrec(l1, l2);
+    const a = s.a * RE, e = s.ecco;
+    return { i, name, group, id: l1.slice(2, 7).trim(), s, perigee: a * (1 - e) - RE, apogee: a * (1 + e) - RE, periodMin: 2 * Math.PI / s.no };
+  });
+}
+function posvel(rec, date) {
+  const pv = satellite.propagate(rec.s, date);
+  if (!pv.position || isNaN(pv.position.x)) return null;
+  return pv;
+}
+const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+// refine closest approach between two satellites near tGuess (ms), searching +-win seconds
+function refine(A, B, tGuess, win) {
+  const f = t => { const a = posvel(A, new Date(t)), b = posvel(B, new Date(t)); return a && b ? dist(a.position, b.position) : 1e9; };
+  let lo = tGuess - win * 1000, hi = tGuess + win * 1000; const g = 0.6180339887;
+  let c = hi - g * (hi - lo), d = lo + g * (hi - lo), fc = f(c), fd = f(d);
+  for (let k = 0; k < 40; k++) { if (fc < fd) { hi = d; d = c; fd = fc; c = hi - g * (hi - lo); fc = f(c); } else { lo = c; c = d; fc = fd; d = lo + g * (hi - lo); fd = f(d); } }
+  const t = (lo + hi) / 2, a = posvel(A, new Date(t)), b = posvel(B, new Date(t));
+  if (!a || !b) return null;
+  return { t, miss: dist(a.position, b.position), a, b };
+}
+// relative geometry in the primary's radial / along-track / cross-track frame
+function rtn(a, b) {
+  const r = a.position, v = a.velocity;
+  const nr = Math.hypot(r.x, r.y, r.z), R = [r.x / nr, r.y / nr, r.z / nr];
+  const h = [r.y * v.z - r.z * v.y, r.z * v.x - r.x * v.z, r.x * v.y - r.y * v.x], nh = Math.hypot(...h), N = h.map(q => q / nh);
+  const T = [N[1] * R[2] - N[2] * R[1], N[2] * R[0] - N[0] * R[2], N[0] * R[1] - N[1] * R[0]];
+  const d = [b.position.x - r.x, b.position.y - r.y, b.position.z - r.z];
+  const dv = [b.velocity.x - v.x, b.velocity.y - v.y, b.velocity.z - v.z];
+  const dot = (p, q) => p[0] * q[0] + p[1] * q[1] + p[2] * q[2];
+  return { radial: dot(d, R), along: dot(d, T), cross: dot(d, N), vrel: Math.hypot(...dv), alt: nr - RE, speed: Math.hypot(v.x, v.y, v.z) };
+}
+// rough collision probability: isotropic 2-D Gaussian in the encounter plane
+function pcEstimate(missKm, sigmaKm, hbrKm) { const s2 = 2 * sigmaKm * sigmaKm; return (hbrKm * hbrKm / s2) * Math.exp(-(missKm * missKm) / s2); }
+
+// Screen `subject` indices (or all) against the whole catalogue.
+// opts: {t0 (ms), hours, step (s), thresh (km), subject: array|null, onProgress}
+function screen(recs, opts) {
+  const { t0, hours, step, thresh } = opts;
+  const subject = opts.subject ? new Set(opts.subject) : null;
+  // altitude-band prefilter for one-vs-all screening
+  let pool = recs;
+  if (subject) {
+    const subs = recs.filter(r => subject.has(r.i));
+    pool = recs.filter(r => subject.has(r.i) || subs.some(s => r.perigee - thresh - 20 < s.apogee && s.perigee - thresh - 20 < r.apogee));
+  }
+  const steps = Math.ceil(hours * 3600 / step);
+  const vmax = 16; // km/s, upper bound on relative speed
+  const C = vmax * step / 2 + thresh + 5;
+  const cand = new Map();
+  const P = new Float64Array(pool.length * 6), ok = new Uint8Array(pool.length);
+  for (let k = 0; k <= steps; k++) {
+    const t = t0 + k * step * 1000, date = new Date(t);
+    for (let j = 0; j < pool.length; j++) { const pv = posvel(pool[j], date); if (!pv) { ok[j] = 0; continue; } ok[j] = 1; const o = j * 6; P[o] = pv.position.x; P[o + 1] = pv.position.y; P[o + 2] = pv.position.z; P[o + 3] = pv.velocity.x; P[o + 4] = pv.velocity.y; P[o + 5] = pv.velocity.z; }
+    const grid = new Map();
+    const key = (x, y, z) => (x + 512) * 1048576 + (y + 512) * 1024 + (z + 512);
+    for (let j = 0; j < pool.length; j++) { if (!ok[j]) continue; const o = j * 6; const kx = Math.floor(P[o] / C), ky = Math.floor(P[o + 1] / C), kz = Math.floor(P[o + 2] / C); const kk = key(kx, ky, kz); let a = grid.get(kk); if (!a) grid.set(kk, a = []); a.push(j); }
+    for (const [kk, arr] of grid) {
+      const kx = Math.floor(kk / 1048576) - 512, ky = Math.floor((kk % 1048576) / 1024) - 512, kz = kk % 1024 - 512;
+      for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) for (let dz = -1; dz <= 1; dz++) {
+        const other = grid.get(key(kx + dx, ky + dy, kz + dz)); if (!other) continue;
+        for (const a of arr) for (const b of other) {
+          if (b <= a) continue;
+          const A = pool[a], B = pool[b];
+          if (subject && !subject.has(A.i) && !subject.has(B.i)) continue;
+          const oa = a * 6, ob = b * 6;
+          const rx = P[ob] - P[oa], ry = P[ob + 1] - P[oa + 1], rz = P[ob + 2] - P[oa + 2];
+          const vx = P[ob + 3] - P[oa + 3], vy = P[ob + 4] - P[oa + 4], vz = P[ob + 5] - P[oa + 5];
+          const vv = vx * vx + vy * vy + vz * vz;
+          let tau = vv > 1e-9 ? -(rx * vx + ry * vy + rz * vz) / vv : 0; tau = Math.max(-step / 2, Math.min(step / 2, tau));
+          const mx = rx + vx * tau, my = ry + vy * tau, mz = rz + vz * tau, md = Math.sqrt(mx * mx + my * my + mz * mz);
+          if (md < thresh * 3) {
+            const pk = A.i < B.i ? A.i + ':' + B.i : B.i + ':' + A.i;
+            const tg = t + tau * 1000, prev = cand.get(pk);
+            if (!prev) cand.set(pk, [{ tg, md, vrel: Math.sqrt(vv) }]);
+            else { const last = prev[prev.length - 1]; if (Math.abs(last.tg - tg) < step * 1500) { if (md < last.md) { last.tg = tg; last.md = md; } } else prev.push({ tg, md, vrel: Math.sqrt(vv) }); }
+          }
+        }
+      }
+    }
+    if (opts.onProgress && k % 20 === 0) opts.onProgress(k / steps, cand.size);
+  }
+  // refine
+  const events = []; let formation = 0;
+  for (const [pk, list] of cand) {
+    const [ia, ib] = pk.split(':').map(Number), A = recs[ia], B = recs[ib];
+    for (const c of list) {
+      if (c.vrel < 0.1) { formation++; continue; } // flying together, not a crossing
+      const r = refine(A, B, c.tg, step); if (!r || r.miss > thresh) continue;
+      const g = rtn(r.a, r.b);
+      events.push({ a: ia, b: ib, t: r.t, miss: r.miss, vrel: g.vrel, radial: g.radial, along: g.along, cross: g.cross, alt: g.alt, pc: pcEstimate(r.miss, 1.0, 0.01) });
+    }
+  }
+  events.sort((x, y) => x.miss - y.miss);
+  return { events, formation, candidates: cand.size, pool: pool.length };
+}
+if (typeof module !== 'undefined') module.exports = { makeRecs, screen, refine, rtn, posvel, pcEstimate, RE };
+
+</script>
+<script>
+{
+const $ = s => document.querySelector(s);
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const GROUPS = { starlink: ['Starlink', '#cfd6dd'], oneweb: ['OneWeb', '#8fd3c7'], kuiper: ['Amazon Kuiper', '#ffb38a'], chinese: ['Qianfan and Guowang', '#ff8fb1'], geo: ['Geostationary', '#f0c060'], navigation: ['Navigation', '#a5e3ff'], stations: ['Space stations', '#ff6b5b'], weather: ['Weather', '#7fb0ff'], resource: ['Earth observation', '#b9e27a'], science: ['Science', '#d7a6ff'], military: ['Military', '#ffa26b'], smallsat: ['Small and amateur', '#e0e7a0'], other: ['Other active', '#9fb0bf'], debris: ['Debris', '#c5603f'] };
+const fmtKm = km => km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(km < 10 ? 2 : 1)} km`;
+const fmtUTC = t => new Date(t).toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+const fmtIn = ms => { const s = Math.round(ms / 1000), a = Math.abs(s); const h = Math.floor(a / 3600), m = Math.floor(a % 3600 / 60), ss = a % 60; const str = h ? `${h}h ${String(m).padStart(2, '0')}m` : m ? `${m}m ${String(ss).padStart(2, '0')}s` : `${ss}s`; return s >= 0 ? `in ${str}` : `${str} ago`; };
+let CAT, RECS, EV, META, simT = 0, rate = 1, sel = null;
+const isDebris = e => RECS[e.a].group === 'debris' || RECS[e.b].group === 'debris';
+const evKey = e => `${RECS[e.a].id}-${RECS[e.b].id}-${Math.round(e.t / 1000)}`;
+
+// ---------- load ----------
+Promise.all(['cat.json', 'events.json', 'land.json'].map(f => fetch(f).then(r => { if (!r.ok) throw new Error(f); return r.json(); }))).then(([cat, ev, land]) => {
+  CAT = cat; RECS = makeRecs(cat);
+  META = ev; EV = ev.events.map(([a, b, t, miss, vrel, radial, along, cross, alt]) => ({ a, b, t, miss, vrel, radial, along, cross, alt, pc: pcEstimate(miss, 1, 0.01) }));
+  const now = Date.now(); simT = now > META.t0 && now < META.t0 + META.hours * 3600e3 ? now : META.t0;
+  buildEarth(land); initPoints(); startWorker();
+  heroText(); renderList(); renderKeys(); renderCj();
+  if (!fleet) { fleet = defaultFleet(); saveFleet(); }
+  $('#loading').classList.add('hide'); route(); checkAlerts();
+}).catch(err => { $('#loading').innerHTML = `<div>Could not load the satellite data (${esc(err.message)}).</div>`; });
+
+// ---------- globe ----------
+const canvas = $('#gl'), stageEl = $('#stage');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.outputEncoding = THREE.sRGBEncoding;
+const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(40, 1, 0.01, 100);
+const earth = new THREE.Group(); scene.add(earth);
+const sunDir = new THREE.Vector3(1, 0.2, 0.4).normalize();
+function buildEarth(land) {
+  const W = 2048, H = 1024, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const sea = g.createLinearGradient(0, 0, 0, H); sea.addColorStop(0, '#123a55'); sea.addColorStop(0.5, '#1a5172'); sea.addColorStop(1, '#123a55'); g.fillStyle = sea; g.fillRect(0, 0, W, H);
+
+  const proj = ([lon, lat]) => [(lon + 180) / 360 * W, (90 - lat) / 180 * H];
+  g.fillStyle = '#4d6d52'; g.strokeStyle = '#9cc2a2'; g.lineWidth = 1.2;
+  { for (const poly of land) { g.beginPath(); for (const ring of poly) { let prev = null; ring.forEach((p, i) => { const [x, y] = proj(p); if (i === 0 || (prev && Math.abs(p[0] - prev[0]) > 180)) g.moveTo(x, y); else g.lineTo(x, y); prev = p; }); g.closePath(); } g.fill('evenodd'); g.stroke(); } }
+  g.strokeStyle = 'rgba(233,214,176,.07)'; g.lineWidth = 1; for (let lon = -180; lon <= 180; lon += 30) { const x = (lon + 180) / 360 * W; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); } for (let lat = -60; lat <= 60; lat += 30) { const y = (90 - lat) / 180 * H; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 8;
+  const mat = new THREE.ShaderMaterial({ uniforms: { map: { value: tex }, sun: { value: sunDir } },
+    vertexShader: 'varying vec2 vUv;varying vec3 vN;void main(){vUv=uv;vN=normalize((modelMatrix*vec4(normal,0.)).xyz);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader: 'uniform sampler2D map;uniform vec3 sun;varying vec2 vUv;varying vec3 vN;void main(){vec3 c=texture2D(map,vUv).rgb;float d=dot(normalize(vN),sun);float l=smoothstep(-0.25,0.35,d);vec3 night=c*0.42+vec3(0.015,0.025,0.05);gl_FragColor=vec4(mix(night,c*1.08,l),1.);}' });
+  earth.add(new THREE.Mesh(new THREE.SphereGeometry(1, 96, 64), mat));
+  const atm = new THREE.Mesh(new THREE.SphereGeometry(1.035, 64, 48), new THREE.ShaderMaterial({ transparent: true, side: THREE.BackSide, depthWrite: false, uniforms: { sun: { value: sunDir } },
+    vertexShader: 'varying vec3 vN;varying vec3 vW;void main(){vN=normalize((modelMatrix*vec4(normal,0.)).xyz);vW=(modelMatrix*vec4(position,1.)).xyz;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
+    fragmentShader: 'uniform vec3 sun;varying vec3 vN;varying vec3 vW;void main(){vec3 v=normalize(cameraPosition-vW);float r=pow(1.-abs(dot(v,vN)),3.);float l=0.35+0.65*smoothstep(-0.3,0.5,dot(vN,sun));gl_FragColor=vec4(vec3(0.45,0.7,0.85)*r*l,r*0.9);}' }));
+  scene.add(atm);
+}
+// stars
+{ const n = 1800, p = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, r = 40; p[i * 3] = r * Math.sqrt(1 - u * u) * Math.cos(a); p[i * 3 + 1] = r * u; p[i * 3 + 2] = r * Math.sqrt(1 - u * u) * Math.sin(a); } const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(p, 3)); scene.add(new THREE.Points(g, new THREE.PointsMaterial({ color: 0xb8c4d0, size: 0.06, transparent: true, opacity: 0.6 }))); }
+// satellites
+let pts, posArr, colArr;
+function initPoints() {
+  const n = RECS.length; posArr = new Float32Array(n * 3); colArr = new Float32Array(n * 3);
+  RECS.forEach((r, i) => { const c = new THREE.Color(GROUPS[r.group][1]); colArr.set([c.r, c.g, c.b], i * 3); });
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(posArr, 3)); g.setAttribute('color', new THREE.BufferAttribute(colArr, 3));
+  pts = new THREE.Points(g, new THREE.ShaderMaterial({ transparent: true, depthWrite: false, vertexColors: true, uniforms: { px: { value: renderer.getPixelRatio() } },
+    vertexShader: 'varying vec3 vC;uniform float px;void main(){vC=color;vec4 mv=modelViewMatrix*vec4(position,1.);gl_PointSize=px*clamp(9.0/-mv.z,1.4,3.5);gl_Position=projectionMatrix*mv;}',
+    fragmentShader: 'varying vec3 vC;void main(){vec2 c=gl_PointCoord-.5;if(length(c)>.5)discard;gl_FragColor=vec4(vC,0.85);}' }));
+  pts.frustumCulled = false; scene.add(pts);
+}
+const toScene = (p, out, o) => { out[o] = p.x / RE; out[o + 1] = p.z / RE; out[o + 2] = -p.y / RE; };
+// worker propagates the catalogue
+let worker, pending = false, satLib = null;
+async function startWorker() {
+  const src = "importScripts('https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js');\n" + document.getElementById('screen-src').textContent + `
+let recs = null;
+onmessage = e => {
+  const d = e.data;
+  if (d.cat) { recs = makeRecs(d.cat); return; }
+  if (d.tick) { const date = new Date(d.t), out = new Float32Array(recs.length * 3); for (let i = 0; i < recs.length; i++) { const pv = posvel(recs[i], date); if (!pv) { out[i*3] = out[i*3+1] = out[i*3+2] = 0; continue; } out[i*3] = pv.position.x / RE; out[i*3+1] = pv.position.z / RE; out[i*3+2] = -pv.position.y / RE; } postMessage({ tick: true, out }, [out.buffer]); return; }
+  if (d.screen) { const r = screen(recs, Object.assign(d.screen, { onProgress: (p, c) => postMessage({ progress: p, cand: c }) })); postMessage({ screened: true, res: r }); }
+};`;
+  const url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  worker = new Worker(url); worker.postMessage({ cat: CAT });
+  worker.onmessage = e => { if (e.data.tick) { posArr.set(e.data.out); pts.geometry.attributes.position.needsUpdate = true; pending = false; } };
+  checkWorker = new Worker(url); checkWorker.postMessage({ cat: CAT }); $('#cgo').disabled = false; $('#flGo').disabled = false;
+}
+let checkWorker = null;
+// selection overlays
+const orbitA = mkLine(0x8fd3c7), orbitB = mkLine(0xff6b5b);
+function mkLine(c) { const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * 361), 3)); g.setDrawRange(0, 0); const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color: c, transparent: true, opacity: 0.9 })); l.frustumCulled = false; scene.add(l); return l; }
+const markA = mkMark(0x8fd3c7), markB = mkMark(0xff6b5b), markX = new THREE.Mesh(new THREE.RingGeometry(0.018, 0.026, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, opacity: 0.95 }));
+markX.visible = false; scene.add(markX);
+function mkMark(c) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.02, 16, 12), new THREE.MeshBasicMaterial({ color: c })); m.visible = false; scene.add(m); return m; }
+function drawOrbit(line, rec, t) { const a = line.geometry.attributes.position; const T = rec.periodMin * 60000; let n = 0; for (let k = 0; k <= 360; k++) { const pv = posvel(rec, new Date(t - T / 2 + T * k / 360)); if (!pv) continue; toScene(pv.position, a.array, n * 3); n++; } a.needsUpdate = true; line.geometry.setDrawRange(0, n); }
+// camera orbit
+let yaw = 0.6, pitch = 0.35, dist = 3.6, drag = null, camTarget = null;
+canvas.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); camTarget = null; });
+canvas.addEventListener('pointermove', e => { if (!drag) return; yaw -= (e.clientX - drag.x) * 0.005; pitch = Math.max(-1.3, Math.min(1.3, pitch + (e.clientY - drag.y) * 0.005)); drag = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', () => drag = null);
+canvas.addEventListener('wheel', e => { e.preventDefault(); dist = Math.max(1.25, Math.min(14, dist * (1 + e.deltaY * 0.001))); }, { passive: false });
+function resize() { const w = stageEl.clientWidth, h = stageEl.clientHeight; if (!w || !h) return; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+const ro = new ResizeObserver(resize); ro.observe(stageEl);
+$('#timectl').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; rate = +b.dataset.v; document.querySelectorAll('#timectl button').forEach(x => x.classList.toggle('on', x === b)); });
+
+// ---------- loop ----------
+let last = performance.now(), tickT = 0, uiT = 0;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (META) { simT += dt * 1000 * rate; const end = META.t0 + META.hours * 3600e3; if (simT > end) simT = META.t0; }
+  if (worker && !pending && now - tickT > 120) { tickT = now; pending = true; worker.postMessage({ tick: true, t: simT }); }
+  if (META) {
+    const gmst = satellite.gstime(new Date(simT)); earth.rotation.y = gmst;
+    // sun direction (low-precision ephemeris) in scene coordinates
+    const d = (simT - Date.UTC(2000, 0, 1, 12)) / 864e5, L = (280.46 + 0.9856474 * d) * Math.PI / 180, gq = (357.528 + 0.9856003 * d) * Math.PI / 180, lam = L + (1.915 * Math.sin(gq) + 0.02 * Math.sin(2 * gq)) * Math.PI / 180, eps = 23.439 * Math.PI / 180;
+    sunDir.set(Math.cos(lam), Math.sin(eps) * Math.sin(lam), -Math.cos(eps) * Math.sin(lam)).normalize();
+    if (sel) { const pa = posvel(RECS[sel.a], new Date(simT)), pb = posvel(RECS[sel.b], new Date(simT)); if (pa) { const v = [0, 0, 0]; toScene(pa.position, v, 0); markA.position.set(...v); } if (pb) { const v = [0, 0, 0]; toScene(pb.position, v, 0); markB.position.set(...v); } markX.lookAt(camera.position); }
+  }
+  if (camTarget) { yaw += (camTarget.yaw - yaw) * Math.min(1, dt * 2.5); pitch += (camTarget.pitch - pitch) * Math.min(1, dt * 2.5); dist += (camTarget.dist - dist) * Math.min(1, dt * 2.5); } else if (!drag && !sel) yaw += dt * 0.02;
+  camera.position.set(dist * Math.cos(pitch) * Math.cos(yaw), dist * Math.sin(pitch), dist * Math.cos(pitch) * Math.sin(yaw)); camera.lookAt(0, 0, 0);
+  if ($('#watch').classList.contains('on')) renderer.render(scene, camera);
+  if (now - uiT > 500 && META) { uiT = now; $('#clk').textContent = fmtUTC(simT); tickUI(); }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- watch rail ----------
+function upcoming(n) { return EV.filter(e => e.t > simT).sort((x, y) => x.miss - y.miss).slice(0, n); }
+function heroText() {
+  const fut = EV.filter(e => e.t > simT), mixed = fut.filter(e => RECS[e.a].group !== 'starlink' || RECS[e.b].group !== 'starlink'), deb = fut.filter(isDebris);
+  const closest = fut.slice().sort((a, b) => a.miss - b.miss)[0];
+  $('#heroT').textContent = `${fut.length.toLocaleString()} passes under 1 km ahead in this window`;
+  $('#heroS').textContent = `${RECS.length.toLocaleString()} tracked objects, including ${RECS.filter(r => r.group === 'debris').length.toLocaleString()} pieces of debris, from elements published ${fmtUTC(META.t0).slice(0, 16)}. ${deb.length} passes involve debris; ${mixed.length} involve someone other than Starlink.${closest ? ` Closest: ${fmtKm(closest.miss)}.` : ''}`;
+}
+function renderKeys() { const cnt = {}; RECS.forEach(r => cnt[r.group] = (cnt[r.group] || 0) + 1); $('#keys').innerHTML = Object.entries(GROUPS).filter(([k]) => cnt[k]).map(([k, [n, c]]) => `<span><i style="background:${c}"></i>${n} ${cnt[k].toLocaleString()}</span>`).join(''); }
+function evRow(e, i) { const A = RECS[e.a], B = RECS[e.b]; return `<div class="ev ${sel === e ? 'on' : ''}" data-k="${evKey(e)}" style="animation-delay:${Math.min(i, 12) * 25}ms"><div class="n">${esc(A.name)} × ${esc(B.name)}</div><div class="m ${e.miss < 0.2 ? 'close' : ''}">${fmtKm(e.miss)}</div><div class="s">${(e.vrel).toFixed(1)} km/s · ${Math.round(e.alt)} km up</div><div class="c" data-t="${e.t}">${fmtIn(e.t - simT)}</div></div>`; }
+function renderList() { $('#list').innerHTML = upcoming(40).map(evRow).join('') || '<div class="empty">No more passes in this window.</div>'; }
+function tickUI() {
+  document.querySelectorAll('[data-t]').forEach(el => el.textContent = fmtIn(+el.dataset.t - simT));
+  if (sel) { const c = $('#selIn'); if (c) c.textContent = fmtIn(sel.t - simT); }
+  if (!tickUI.n || ++tickUI.n % 20 === 0) { if ($('#watch').classList.contains('on') && !$('#list').matches(':hover')) { renderList(); heroText(); } tickUI.n = tickUI.n || 1; }
+}
+const findEv = k => EV.find(e => evKey(e) === k);
+$('#list').addEventListener('click', e => { const r = e.target.closest('.ev'); if (r) select(findEv(r.dataset.k)); });
+function select(e, go) {
+  sel = e; if (!e) return; const A = RECS[e.a], B = RECS[e.b];
+  drawOrbit(orbitA, A, e.t); drawOrbit(orbitB, B, e.t); markA.visible = markB.visible = markX.visible = true;
+  const pa = posvel(A, new Date(e.t)); const v = [0, 0, 0]; toScene(pa.position, v, 0);
+  const sp = new THREE.Vector3(...v).applyAxisAngle(new THREE.Vector3(0, 1, 0), 0); markX.position.copy(sp);
+  const len = sp.length(); camTarget = { yaw: Math.atan2(sp.z, sp.x) + 0.35, pitch: Math.asin(sp.y / len) * 0.8, dist: 3.4 };
+  $('#selcard').innerHTML = `<h3>${esc(A.name)} × ${esc(B.name)}</h3><div class="sub">Closest at ${fmtUTC(e.t).slice(11)} · <span id="selIn">${fmtIn(e.t - simT)}</span></div>
+    <div class="fig3"><div>Miss<b>${fmtKm(e.miss)}</b></div><div>Closing speed<b>${e.vrel.toFixed(1)} km/s</b></div><div>Altitude<b>${Math.round(e.alt)} km</b></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-open>Open the encounter</button><button class="btn ghost" data-jump>Jump to the pass</button></div>`;
+  $('#selcard').classList.add('show'); renderList();
+  if (go) location.hash = 'encounter'; else if ($('#encounter').classList.contains('on')) renderEnc();
+}
+$('#selcard').addEventListener('click', e => { if (e.target.closest('[data-open]')) location.hash = 'encounter'; if (e.target.closest('[data-jump]')) { simT = sel.t - 90e3; rate = 60; setTimeout(checkAlerts, 50); document.querySelectorAll('#timectl button').forEach(x => x.classList.toggle('on', x.dataset.v === '60')); } });
+
+// ---------- all passes table ----------
+let cjSort = { k: 'miss', dir: 1 }, cjLimit = 100;
+function cjRows() {
+  const q = $('#fq').value.trim().toLowerCase(), kind = $('#fk').value, mx = +$('#fm').value / 1000;
+  return EV.filter(e => { const A = RECS[e.a], B = RECS[e.b], sa = A.group === 'starlink', sb = B.group === 'starlink';
+    if (e.miss > mx) return false; if (kind === 'ss' && !(sa && sb)) return false; if (kind === 'mixed' && !(sa !== sb)) return false; if (kind === 'other' && (sa || sb)) return false; if (kind === 'debris' && !isDebris(e)) return false;
+    if (q && !(A.name.toLowerCase().includes(q) || B.name.toLowerCase().includes(q) || A.id === q || B.id === q)) return false; return true; })
+    .sort((x, y) => (x[cjSort.k] - y[cjSort.k]) * cjSort.dir);
+}
+function renderCj() {
+  const rows = cjRows(); $('#fmV').textContent = `${$('#fm').value} m`;
+  $('#cjLede').textContent = `Screened ${RECS.length.toLocaleString()} satellites over ${META.hours} hours from ${fmtUTC(META.t0).slice(0, 16)}. ${META.formation.toLocaleString()} more pairs were flying in formation and are left out.`;
+  const all = EV, under100 = all.filter(e => e.miss < 0.1).length, mixed = all.filter(e => (RECS[e.a].group === 'starlink') !== (RECS[e.b].group === 'starlink')).length;
+  $('#cjStats').innerHTML = [['Passes under 1 km', all.length.toLocaleString()], ['Under 100 m', under100], ['Involving debris', all.filter(isDebris).length], ['Fastest closing speed', `${Math.max(...all.map(e => e.vrel)).toFixed(1)} km/s`]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  const arrow = k => cjSort.k === k ? (cjSort.dir > 0 ? ' ↑' : ' ↓') : '';
+  $('#cjTable').innerHTML = `<thead><tr><th>Pair</th><th data-s="t">Closest approach${arrow('t')}</th><th class="r" data-s="miss">Miss${arrow('miss')}</th><th class="r" data-s="vrel">Closing speed${arrow('vrel')}</th><th class="r" data-s="alt">Altitude${arrow('alt')}</th></tr></thead><tbody>${rows.slice(0, cjLimit).map(e => { const A = RECS[e.a], B = RECS[e.b]; const dbr = isDebris(e); return `<tr data-k="${evKey(e)}"><td class="nm">${esc(A.name)} × ${esc(B.name)} ${dbr ? '<span class="tag x">debris</span>' : ''}</td><td class="mono">${fmtUTC(e.t).slice(5, 16)}</td><td class="r mono">${fmtKm(e.miss)}</td><td class="r mono">${e.vrel.toFixed(2)} km/s</td><td class="r mono">${Math.round(e.alt)} km</td></tr>`; }).join('')}</tbody>`;
+  $('#cjCsv').hidden = !dl; $('#cjTitle').textContent = rows.length === all.length ? `Every predicted pass under 1 km: ${all.length.toLocaleString()}` : `${rows.length.toLocaleString()} passes match`;
+  $('#more').hidden = rows.length <= cjLimit;
+}
+['#fq', '#fk', '#fm'].forEach(s => $(s).addEventListener('input', () => { cjLimit = 100; renderCj(); }));
+$('#more').addEventListener('click', () => { cjLimit += 200; renderCj(); });
+$('#cjTable').addEventListener('click', e => { const th = e.target.closest('th[data-s]'); if (th) { const k = th.dataset.s; cjSort = { k, dir: cjSort.k === k ? -cjSort.dir : (k === 'pc' || k === 'vrel' ? -1 : 1) }; renderCj(); return; } const tr = e.target.closest('tr[data-k]'); if (tr) select(findEv(tr.dataset.k), true); });
+
+// ---------- encounter ----------
+function chart(svg, o) {
+  const W = svg.clientWidth, H = svg.clientHeight; if (!W) return; const pl = 56, pr = 14, pt = 10, pb = 30;
+  const L = v => o.log ? Math.log10(Math.max(v, 1e-9)) : v;
+  const xs = v => pl + (v - o.x0) / (o.x1 - o.x0) * (W - pl - pr), ys = v => pt + (1 - (L(v) - L(o.y0)) / (L(o.y1) - L(o.y0))) * (H - pt - pb);
+  let s = ''; const nt = W < 420 ? 3 : 5;
+  const yt = o.log ? Array.from({ length: Math.floor(L(o.y1)) - Math.ceil(L(o.y0)) + 1 }, (_, i) => 10 ** (Math.ceil(L(o.y0)) + i)) : Array.from({ length: nt + 1 }, (_, i) => o.y0 + (o.y1 - o.y0) * i / nt);
+  for (const v of yt) { const y = ys(v); s += `<line x1="${pl}" x2="${W - pr}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl - 6}" y="${y + 4}" text-anchor="end">${o.fy(v)}</text>`; }
+  for (let i = 0; i <= nt; i++) { const v = o.x0 + (o.x1 - o.x0) * i / nt; s += `<text x="${xs(v)}" y="${H - 8}" text-anchor="middle">${o.fx(v)}</text>`; }
+  for (const h of o.hlines || []) s += `<line x1="${pl}" x2="${W - pr}" y1="${ys(h.y)}" y2="${ys(h.y)}" stroke="${h.c}" stroke-dasharray="5 5"/><text x="${W - pr}" y="${ys(h.y) - 6}" text-anchor="end" style="fill:${h.c}">${h.label}</text>`;
+  for (const se of o.series) s += `<path d="${se.pts.map((p, i) => (i ? 'L' : 'M') + xs(p[0]).toFixed(1) + ' ' + ys(p[1]).toFixed(1)).join('')}" fill="none" stroke="${se.c}" stroke-width="${se.w || 2.4}" stroke-dasharray="3000" stroke-dashoffset="3000" style="animation:dl 1.1s ease forwards"/>`;
+  for (const m of o.marks || []) s += `<circle cx="${xs(m.x)}" cy="${ys(m.y)}" r="6" fill="${m.c}" stroke="var(--panel)" stroke-width="2"/>${m.label ? `<text x="${xs(m.x) + 10}" y="${ys(m.y) - 8}" style="fill:${m.c}">${m.label}</text>` : ''}`;
+  svg.innerHTML = '<style>@keyframes dl{to{stroke-dashoffset:0}}</style>' + s;
+}
+let plan = { who: 0, lead: 1, dv: 5, safe: 2 };
+function cw(dv, n, tau) { return { x: 2 * dv / n * (1 - Math.cos(n * tau)), y: dv / n * (4 * Math.sin(n * tau) - 3 * n * tau) }; } // radial, along (km if dv km/s)
+function burnResult(e, p) {
+  const mover = p.who === 0 ? RECS[e.a] : RECS[e.b], n = 2 * Math.PI / (mover.periodMin * 60), tau = p.lead * mover.periodMin * 60;
+  const d = cw(p.dv / 1e5, n, tau); // cm/s -> km/s
+  // relative vector is (second - first) in the first one's frame; moving the first shifts it the other way
+  const sgn = p.who === 0 ? -1 : 1;
+  const r = e.radial + sgn * d.x, a = e.along + sgn * d.y;
+  return { miss: Math.hypot(r, a, e.cross), r, a, dx: d.x, dy: d.y };
+}
+function renderEnc() {
+  const e = sel; $('#encEmpty').hidden = !!e; $('#enc').hidden = !e; if (!e) return;
+  const A = RECS[e.a], B = RECS[e.b];
+  $('#encTitle').textContent = `${A.name} and ${B.name} pass ${fmtKm(e.miss)} apart`;
+  $('#encLede').textContent = `${fmtUTC(e.t)} (${fmtIn(e.t - simT)} on the sim clock), ${Math.round(e.alt)} km above the ground, closing at ${e.vrel.toFixed(2)} km/s. ${GROUPS[A.group][0]} #${A.id} and ${GROUPS[B.group][0]} #${B.id}.`;
+  $('#encStats').innerHTML = [['Radial', fmtKm(Math.abs(e.radial))], ['Along-track', fmtKm(Math.abs(e.along))], ['Cross-track', fmtKm(Math.abs(e.cross))], ['Rough risk*', e.pc.toExponential(1)]].map(([a, b]) => `<div><span>${a}</span><b>${b}</b></div>`).join('');
+  $('#encPdf').hidden = !dl; const star = $('#encStar'); star.classList.toggle('on', !!store.get('scw.watch', {})[evKey(e)]);
+  // separation curve
+  const pts = []; for (let s = -900; s <= 900; s += 10) { const pa = posvel(A, new Date(e.t + s * 1000)), pb = posvel(B, new Date(e.t + s * 1000)); if (pa && pb) pts.push([s / 60, Math.hypot(pa.position.x - pb.position.x, pa.position.y - pb.position.y, pa.position.z - pb.position.z)]); }
+  pts.push([0, e.miss]); pts.sort((p, q) => p[0] - q[0]);
+  chart($('#chSep'), { log: true, x0: -15, x1: 15, y0: Math.min(0.01, e.miss * 0.6), y1: 10000, fx: v => `${v > 0 ? '+' : ''}${Math.round(v)} min`, fy: v => v >= 1 ? `${v.toLocaleString()} km` : `${Math.round(v * 1000)} m`, series: [{ pts, c: 'var(--glass)' }], marks: [{ x: 0, y: e.miss, c: 'var(--coral)', label: fmtKm(e.miss) }] });
+  renderGeo(); renderPlan();
+}
+function renderGeo(br) {
+  const e = sel, svg = $('#chGeo'), W = svg.clientWidth, H = svg.clientHeight; if (!W) return;
+  const res = br || burnResult(e, plan);
+  const span = Math.max(plan.safe * 1.4, Math.abs(e.radial), Math.abs(e.along), Math.abs(res.r), Math.abs(res.a), 0.3) * 1.25;
+  const cx = W / 2, cy = H / 2, k = Math.min(W, H) / 2 / span;
+  const X = a => cx + a * k, Y = r => cy - r * k;
+  let s = `<line x1="0" x2="${W}" y1="${cy}" y2="${cy}" stroke="var(--line)"/><line x1="${cx}" x2="${cx}" y1="0" y2="${H}" stroke="var(--line)"/>
+    <text x="${W - 6}" y="${cy - 8}" text-anchor="end">along-track →</text><text x="${cx + 8}" y="16">↑ radial (up)</text>
+    <circle cx="${cx}" cy="${cy}" r="${plan.safe * k}" fill="rgba(143,211,199,.06)" stroke="var(--glass)" stroke-dasharray="6 5"/><text x="${cx + plan.safe * k * 0.72}" y="${cy + plan.safe * k * 0.72 + 16}" style="fill:var(--glass)">${plan.safe} km safe zone</text>
+    <circle cx="${cx}" cy="${cy}" r="7" fill="var(--glass)"/><text x="${cx - 10}" y="${cy + 22}" text-anchor="end">${esc(RECS[e.a].name)}</text>
+    <circle cx="${X(e.along)}" cy="${Y(e.radial)}" r="7" fill="var(--coral)"/><text x="${X(e.along) + 10}" y="${Y(e.radial) - 10}" style="fill:var(--coral)">now ${fmtKm(e.miss)}</text>`;
+  if (plan.dv) s += `<line x1="${X(e.along)}" y1="${Y(e.radial)}" x2="${X(res.a)}" y2="${Y(res.r)}" stroke="var(--sand)" stroke-width="2" stroke-dasharray="4 4"/><circle cx="${X(res.a)}" cy="${Y(res.r)}" r="7" fill="none" stroke="var(--sand)" stroke-width="2.5" style="transition:all .3s"/><text x="${X(res.a) + 10}" y="${Y(res.r) + 18}" style="fill:var(--sand)">after burn ${fmtKm(res.miss)}</text>`;
+  svg.innerHTML = s;
+  $('#geoSub').textContent = `Second satellite's offset from the first at closest approach. Cross-track offset of ${fmtKm(Math.abs(e.cross))} is out of the page.`;
+}
+function renderPlan() {
+  const e = sel; if (!e) return; const r = burnResult(e, plan), mover = plan.who === 0 ? RECS[e.a] : RECS[e.b];
+  $('#pDvV').textContent = `${plan.dv.toFixed(1)} cm/s`;
+  // smallest push that clears the safe distance (search both directions)
+  let need = null; for (let dv = 0.5; dv <= 60; dv += 0.5) { for (const sgn of [1, -1]) { if (burnResult(e, Object.assign({}, plan, { dv: dv * sgn })).miss >= plan.safe) { need = dv * sgn; break; } } if (need !== null) break; }
+  const ok = r.miss >= plan.safe;
+  $('#pRes').innerHTML = `<div><span>Miss after the burn</span><b class="${ok ? 'ok' : 'bad'}">${fmtKm(r.miss)}</b></div><div><span>Shift at the pass</span><b>${fmtKm(Math.hypot(r.dx, r.dy))}</b></div><div><span>Smallest push for ${plan.safe} km</span><b>${need === null ? 'over 60 cm/s' : `${need.toFixed(1)} cm/s`}</b></div>
+    <div style="flex:1;min-width:200px;color:var(--mute);font-size:14px">${ok ? `${esc(mover.name)} burns ${plan.lead === 0.5 ? 'half an orbit' : plan.lead + ' orbit' + (plan.lead > 1 ? 's' : '')} early and clears the ${plan.safe} km zone.` : `Not enough yet. Try a bigger push or burn earlier.`}</div>
+    ${need !== null ? `<button class="btn ghost" id="pUse">Use ${need.toFixed(1)} cm/s</button>` : ''}`;
+  const curve = []; for (let dv = -30; dv <= 30; dv += 0.5) curve.push([dv, burnResult(e, Object.assign({}, plan, { dv })).miss]);
+  chart($('#chDv'), { x0: -30, x1: 30, y0: 0, y1: Math.max(plan.safe * 1.6, ...curve.map(p => p[1])) * 1.02, fx: v => `${v > 0 ? '+' : ''}${Math.round(v)} cm/s`, fy: v => `${v.toFixed(1)} km`, series: [{ pts: curve, c: 'var(--sand)' }], hlines: [{ y: plan.safe, c: 'var(--glass)', label: `${plan.safe} km` }], marks: [{ x: plan.dv, y: r.miss, c: ok ? 'var(--glass)' : 'var(--coral)' }] });
+  renderGeo(r);
+}
+$('#pWho').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; plan.who = +b.dataset.v; $('#pWho').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); renderPlan(); });
+$('#pLead').addEventListener('change', e => { plan.lead = +e.target.value; renderPlan(); });
+$('#pSafe').addEventListener('change', e => { plan.safe = +e.target.value; renderPlan(); });
+$('#pDv').addEventListener('input', e => { plan.dv = +e.target.value; renderPlan(); });
+$('#pRes').addEventListener('click', e => { if (e.target.id === 'pUse') { const m = e.target.textContent.match(/-?[\d.]+/); plan.dv = +m[0]; $('#pDv').value = plan.dv; renderPlan(); } });
+$('#encStar').addEventListener('click', () => { const w = store.get('scw.watch', {}), k = evKey(sel); if (w[k]) delete w[k]; else w[k] = { a: RECS[sel.a].id, b: RECS[sel.b].id, t: sel.t, miss: sel.miss, names: [RECS[sel.a].name, RECS[sel.b].name], added: Date.now() }; store.set('scw.watch', w); $('#encStar').classList.toggle('on', !!w[k]); });
+['#chSep', '#chGeo', '#chDv'].forEach(s => { const r2 = new ResizeObserver(() => { if (sel && $('#encounter').classList.contains('on')) renderEnc(); }); r2.observe($(s)); });
+
+// ---------- check one satellite ----------
+let chosen = null;
+$('#cq').addEventListener('input', () => {
+  const q = $('#cq').value.trim().toLowerCase(); const box = $('#sugg'); chosen = null;
+  if (q.length < 2 || !RECS) { box.style.display = 'none'; return; }
+  const hits = []; for (const r of RECS) { if (r.name.toLowerCase().includes(q) || r.id === q) { hits.push(r); if (hits.length > 12) break; } }
+  box.innerHTML = hits.map(r => `<button type="button" data-i="${r.i}">${esc(r.name)}<span>#${r.id} · ${Math.round(r.perigee)}–${Math.round(r.apogee)} km</span></button>`).join('') || '<div class="empty" style="padding:10px 12px">No match</div>'; box.style.display = 'block';
+});
+$('#sugg').addEventListener('click', e => { const b = e.target.closest('button[data-i]'); if (!b) return; chosen = RECS[+b.dataset.i]; $('#cq').value = chosen.name; $('#sugg').style.display = 'none'; });
+document.addEventListener('click', e => { if (!e.target.closest('#sugg') && e.target.id !== 'cq') $('#sugg').style.display = 'none'; });
+let lastCheck = store.get('scw.check', null);
+$('#cgo').addEventListener('click', () => {
+  if (!chosen) { const q = $('#cq').value.trim().toLowerCase(); chosen = RECS.find(r => r.name.toLowerCase() === q || r.id === q) || RECS.find(r => r.name.toLowerCase().includes(q)); }
+  if (!chosen) { $('#cstat').textContent = 'Pick a satellite from the list first.'; return; }
+  const hours = +$('#cw').value, thresh = +$('#cl').value, s = chosen, t0 = Math.max(META.t0, Math.min(simT, META.t0 + 24 * 3600e3 - hours * 3600e3));
+  const band = RECS.filter(r => r.i === s.i || (r.perigee - thresh - 20 < s.apogee && s.perigee - thresh - 20 < r.apogee)).length;
+  $('#cstat').textContent = `Propagating ${s.name} and ${band.toLocaleString() - 1} objects in its altitude band…`; $('#cprog').hidden = false; $('#cprog i').style.width = '0'; $('#cgo').disabled = true;
+  const t1 = performance.now();
+  checkWorker.onmessage = e => {
+    if (e.data.progress !== undefined) { $('#cprog i').style.width = `${e.data.progress * 100}%`; return; }
+    if (!e.data.screened) return;
+    const res = e.data.res, secs = (performance.now() - t1) / 1000; $('#cgo').disabled = false; $('#cprog').hidden = true;
+    lastCheck = { i: s.i, name: s.name, hours, thresh, t0, secs, pool: res.pool, formation: res.formation, events: res.events.map(x => ({ o: x.a === s.i ? x.b : x.a, t: x.t, miss: x.miss, vrel: x.vrel, alt: x.alt })) };
+    store.set('scw.check', lastCheck); renderCheck();
+  };
+  checkWorker.postMessage({ screen: { t0, hours, step: 20, thresh, subject: [s.i] } });
+});
+function renderCheck() {
+  const c = lastCheck; if (!c || !RECS) return;
+  $('#cstat').textContent = `${c.name}: ${c.events.length} pass${c.events.length === 1 ? '' : 'es'} under ${c.thresh} km in ${c.hours} hours from ${fmtUTC(c.t0).slice(0, 16)}. Checked against ${(c.pool - 1).toLocaleString()} objects in ${c.secs.toFixed(1)} s on this device.`;
+  $('#cres').hidden = false; $('#cCsv').hidden = !dl || !c.events.length;
+  $('#cTable').innerHTML = c.events.length ? `<thead><tr><th>Passes</th><th>Closest approach</th><th class="r">Miss</th><th class="r">Closing speed</th><th class="r">Altitude</th></tr></thead><tbody>${c.events.slice(0, 300).map(x => `<tr data-o="${x.o}" data-s="${c.i}" data-tca="${Math.round(x.t)}"><td class="nm">${esc(RECS[x.o].name)} <span class="tag">${GROUPS[RECS[x.o].group][0]}</span></td><td class="mono">${fmtUTC(x.t).slice(5, 19)}</td><td class="r mono">${fmtKm(x.miss)}</td><td class="r mono">${x.vrel.toFixed(2)} km/s</td><td class="r mono">${Math.round(x.alt)} km</td></tr>`).join('')}</tbody>` : '<tbody><tr><td class="empty">Nothing came that close. Try a larger distance or a longer window.</td></tr></tbody>';
+}
+
+// ---------- watchlist ----------
+function renderWl() {
+  const w = Object.entries(store.get('scw.watch', {})).map(([k, v]) => Object.assign({ k }, v)).sort((a, b) => a.t - b.t);
+  $('#wlTitle').textContent = w.length ? `${w.length} pass${w.length === 1 ? '' : 'es'} on your watchlist` : 'Watchlist';
+  $('#wlTable').innerHTML = w.length ? `<thead><tr><th>Pair</th><th>Closest approach</th><th class="r">Miss</th><th>When</th><th></th></tr></thead><tbody>${w.map(x => `<tr data-k="${x.k}"><td class="nm">${esc(x.names[0])} × ${esc(x.names[1])}</td><td class="mono">${fmtUTC(x.t).slice(5, 16)}</td><td class="r mono">${fmtKm(x.miss)}</td><td class="mono" data-t="${x.t}">${fmtIn(x.t - simT)}</td><td><button class="star on" data-del="${x.k}" aria-label="Remove">★</button></td></tr>`).join('')}</tbody>` : '<tbody><tr><td class="empty">Nothing starred yet. Open an encounter and press the star.</td></tr></tbody>';
+}
+$('#wlTable').addEventListener('click', e => { const d = e.target.closest('[data-del]'); if (d) { const w = store.get('scw.watch', {}); delete w[d.dataset.del]; store.set('scw.watch', w); renderWl(); return; } const tr = e.target.closest('tr[data-k]'); if (tr) { const ev = findEv(tr.dataset.k); if (ev) select(ev, true); } });
+
+
+// ---------- full encounter from any pair ----------
+function buildEvent(ia, ib, tg) {
+  const ex = EV.find(e => ((e.a === ia && e.b === ib) || (e.a === ib && e.b === ia)) && Math.abs(e.t - tg) < 60e3); if (ex) return ex;
+  const r = refine(RECS[ia], RECS[ib], tg, 30); if (!r) return null; const g = rtn(r.a, r.b);
+  const e = { a: ia, b: ib, t: r.t, miss: r.miss, vrel: g.vrel, radial: g.radial, along: g.along, cross: g.cross, alt: g.alt, pc: pcEstimate(r.miss, 1, 0.01), extra: true };
+  EV.push(e); return e;
+}
+$('#cTable').addEventListener('click', e => { const tr = e.target.closest('tr[data-o]'); if (!tr) return; const ev = buildEvent(+tr.dataset.s, +tr.dataset.o, +tr.dataset.tca); if (ev) select(ev, true); });
+
+// ---------- downloads ----------
+let dl = null;
+(async () => { try { if (window.claude && window.claude.use) dl = await window.claude.use('downloads'); } catch (e) { dl = null; }
+  // outside claude.ai: an ordinary browser download
+  if (!dl && !window.claude) dl = { save: async ({ filename, data }) => { const a = document.createElement('a'), u = URL.createObjectURL(data instanceof Blob ? data : new Blob([data])); a.href = u; a.download = filename; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); return { status: 'saved' }; } }; await null; document.querySelectorAll('.dl').forEach(b => b.hidden = !dl); })();
+async function save(filename, data, btn) {
+  if (!dl) return; const old = btn && btn.textContent;
+  try { await dl.save({ filename, data }); if (btn) { btn.textContent = 'Saved'; setTimeout(() => btn.textContent = old, 1800); } }
+  catch (err) { if (btn && err && err.code !== 'declined') { btn.textContent = 'Could not save here'; setTimeout(() => btn.textContent = old, 2200); } }
+}
+const csvCell = v => { const t = String(v ?? ''); return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t; };
+const csv = rows => rows.map(r => r.map(csvCell).join(',')).join('\n') + '\n';
+const evCsvRows = list => [['first', 'first_norad', 'first_group', 'second', 'second_norad', 'second_group', 'tca_utc', 'miss_m', 'radial_m', 'along_m', 'cross_m', 'closing_km_s', 'altitude_km']].concat(list.map(e => { const A = RECS[e.a], B = RECS[e.b]; return [A.name, A.id, A.group, B.name, B.id, B.group, new Date(e.t).toISOString(), (e.miss * 1000).toFixed(1), (e.radial * 1000).toFixed(1), (e.along * 1000).toFixed(1), (e.cross * 1000).toFixed(1), e.vrel.toFixed(3), e.alt.toFixed(1)]; }));
+$('#cjCsv').addEventListener('click', e => save(`close-passes-${fmtUTC(META.t0).slice(0, 10)}.csv`, csv(evCsvRows(cjRows())), e.currentTarget));
+$('#cCsv').addEventListener('click', e => { const c = lastCheck; if (!c) return; save(`${c.name.replace(/[^\w-]+/g, '_')}-screen.csv`, csv([['object', 'norad', 'group', 'tca_utc', 'miss_m', 'closing_km_s', 'altitude_km']].concat(c.events.map(x => [RECS[x.o].name, RECS[x.o].id, RECS[x.o].group, new Date(x.t).toISOString(), (x.miss * 1000).toFixed(1), x.vrel.toFixed(3), x.alt.toFixed(1)]))), e.currentTarget); });
+$('#encPdf').addEventListener('click', e => { if (sel) save(`encounter-${RECS[sel.a].id}-${RECS[sel.b].id}.pdf`, encounterPdf(sel), e.currentTarget); });
+function encounterPdf(e) {
+  const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit: 'mm', format: 'a4' }); const A = RECS[e.a], B = RECS[e.b];
+  const W = 210, M = 16; let y = 20;
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.text(doc.splitTextToSize(`${A.name} and ${B.name}: close approach of ${fmtKm(e.miss)}`, W - 2 * M), M, y); y += 16;
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(90);
+  doc.text(`Conjunction assessment generated ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC from public element sets published ${fmtUTC(META.t0).slice(0, 16)}.`, M, y); y += 10;
+  doc.setTextColor(20); doc.setFontSize(11);
+  const rows = [['Time of closest approach', fmtUTC(e.t)], ['Miss distance', fmtKm(e.miss)], ['Radial / along-track / cross-track', `${(e.radial * 1000).toFixed(0)} m / ${(e.along * 1000).toFixed(0)} m / ${(e.cross * 1000).toFixed(0)} m`], ['Closing speed', `${e.vrel.toFixed(2)} km/s`], ['Altitude', `${Math.round(e.alt)} km`],
+    ['First object', `${A.name}, NORAD ${A.id}, ${GROUPS[A.group][0]}, ${Math.round(A.perigee)} x ${Math.round(A.apogee)} km`], ['Second object', `${B.name}, NORAD ${B.id}, ${GROUPS[B.group][0]}, ${Math.round(B.perigee)} x ${Math.round(B.apogee)} km`], ['Rough probability', `${e.pc.toExponential(1)} (assumes 1 km uncertainty per object, 10 m combined size)`]];
+  for (const [k, v] of rows) { doc.setFont('helvetica', 'bold'); doc.text(k, M, y); doc.setFont('helvetica', 'normal'); const t = doc.splitTextToSize(v, W - 2 * M - 70); doc.text(t, M + 70, y); y += 7 * t.length; }
+  // separation chart (log scale)
+  y += 6; doc.setFont('helvetica', 'bold'); doc.text('Separation, 15 minutes either side of closest approach (log scale)', M, y); y += 4;
+  const cx = M, cw = W - 2 * M, ch = 55, cy = y; doc.setDrawColor(200); doc.rect(cx, cy, cw, ch);
+  const lg = v => Math.log10(Math.max(v, 0.001)), y0 = lg(Math.min(0.01, e.miss * 0.6)), y1 = 4, pts = [];
+  for (let s2 = -900; s2 <= 900; s2 += 15) { const pa = posvel(A, new Date(e.t + s2 * 1000)), pb = posvel(B, new Date(e.t + s2 * 1000)); if (pa && pb) pts.push([s2, Math.hypot(pa.position.x - pb.position.x, pa.position.y - pb.position.y, pa.position.z - pb.position.z)]); }
+  pts.push([0, e.miss]); pts.sort((p, q) => p[0] - q[0]);
+  doc.setDrawColor(30, 120, 110); doc.setLineWidth(0.6);
+  for (let i = 1; i < pts.length; i++) { const X = p => cx + (p[0] + 900) / 1800 * cw, Y = p => cy + ch - (lg(p[1]) - y0) / (y1 - y0) * ch; doc.line(X(pts[i - 1]), Y(pts[i - 1]), X(pts[i]), Y(pts[i])); }
+  doc.setFontSize(8); doc.setTextColor(110); doc.text('-15 min', cx, cy + ch + 4); doc.text('+15 min', cx + cw - 12, cy + ch + 4); doc.text('10,000 km', cx + 1, cy + 4); doc.text(fmtKm(10 ** y0), cx + 1, cy + ch - 1);
+  y = cy + ch + 12; doc.setTextColor(20); doc.setFontSize(11);
+  // burn plan
+  const r = burnResult(e, plan), mover = plan.who === 0 ? A : B;
+  doc.setFont('helvetica', 'bold'); doc.text('Avoidance option', M, y); y += 7; doc.setFont('helvetica', 'normal');
+  const lines = doc.splitTextToSize(`${mover.name} makes a ${Math.abs(plan.dv).toFixed(1)} cm/s ${plan.dv >= 0 ? 'posigrade' : 'retrograde'} burn ${plan.lead === 0.5 ? 'half an orbit' : plan.lead + ' orbit' + (plan.lead > 1 ? 's' : '')} (${Math.round(plan.lead * mover.periodMin)} min) before closest approach. Predicted miss after the burn: ${fmtKm(r.miss)} against a ${plan.safe} km safety distance (${r.miss >= plan.safe ? 'clears it' : 'does not clear it'}). Computed with Clohessy-Wiltshire relative motion about the pre-burn orbit.`, W - 2 * M);
+  doc.text(lines, M, y); y += 6 * lines.length + 6;
+  doc.setFontSize(9); doc.setTextColor(110);
+  doc.text(doc.splitTextToSize('Method: SGP4 propagation of public two-line element sets; closest approach found by golden-section search on full SGP4 states. Public elements typically carry around 1 km of error, so this is a screening result to prompt a closer look, not an operational go/no-go.', W - 2 * M), M, y);
+  return doc.output('blob');
+}
+
+// ---------- my fleet ----------
+let fleet = store.get('scw.fleet', null), fleetScreen = store.get('scw.fleetScreen', null);
+function fleetIdx() { if (!fleet) return []; const byId = new Map(RECS.map(r => [r.id, r.i])); return fleet.map(id => byId.get(id)).filter(i => i !== undefined); }
+function defaultFleet() { const want = ['25544', '48274', '43013', '54234']; const ids = new Set(RECS.map(r => r.id)); return want.filter(w => ids.has(w)); }
+function saveFleet() { store.set('scw.fleet', fleet); }
+function fleetEvents() {
+  const set = new Set(fleetIdx()); const out = [];
+  for (const e of EV) if (set.has(e.a) || set.has(e.b)) out.push({ s: set.has(e.a) ? e.a : e.b, o: set.has(e.a) ? e.b : e.a, t: e.t, miss: e.miss, vrel: e.vrel, alt: e.alt, src: 'screen' });
+  if (fleetScreen) for (const x of fleetScreen.events) if (set.has(x.s) && !out.some(y => y.s === x.s && y.o === x.o && Math.abs(y.t - x.t) < 60e3)) out.push(x);
+  return out.sort((a, b) => a.t - b.t);
+}
+function renderFleet() {
+  if (!fleet) { fleet = defaultFleet(); saveFleet(); }
+  const idx = fleetIdx();
+  $('#flChips').innerHTML = idx.map(i => `<span class="fchip">${esc(RECS[i].name)} <span class="mono" style="color:var(--mute);font-size:12px">#${RECS[i].id}</span><button data-rm="${RECS[i].id}" aria-label="Remove ${esc(RECS[i].name)}">×</button></span>`).join('') || '<span class="lede" style="margin:0">No satellites yet. Add one above.</span>';
+  const ev = fleetEvents().filter(x => x.t > simT - 600e3);
+  $('#flTitle').textContent = idx.length ? `${idx.length} satellite${idx.length === 1 ? '' : 's'} watched, ${ev.length} pass${ev.length === 1 ? '' : 'es'} ahead` : 'Watch your own satellites';
+  $('#flTable').innerHTML = ev.length ? `<thead><tr><th>Your satellite</th><th>Passes</th><th>Closest approach</th><th>When</th><th class="r">Miss</th><th class="r">Closing speed</th></tr></thead><tbody>${ev.slice(0, 300).map(x => `<tr data-o="${x.o}" data-s="${x.s}" data-tca="${Math.round(x.t)}"><td class="nm">${esc(RECS[x.s].name)}</td><td class="nm">${esc(RECS[x.o].name)} ${RECS[x.o].group === 'debris' ? '<span class="tag x">debris</span>' : ''}</td><td class="mono">${fmtUTC(x.t).slice(5, 19)}</td><td class="mono" data-t="${x.t}">${fmtIn(x.t - simT)}</td><td class="r mono" style="${x.miss < 1 ? 'color:var(--coral)' : ''}">${fmtKm(x.miss)}</td><td class="r mono">${x.vrel.toFixed(2)} km/s</td></tr>`).join('')}</tbody>` : `<tbody><tr><td class="empty">${idx.length ? 'No passes found yet for these satellites under 1 km. Press "Screen my fleet" to look out to 5 or 10 km.' : 'Add a satellite to start.'}</td></tr></tbody>`;
+  if (fleetScreen) $('#flStat').textContent = `Fleet screen: ${fleetScreen.events.length} passes under ${fleetScreen.thresh} km over ${fleetScreen.hours} h, run ${new Date(fleetScreen.at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })} in ${fleetScreen.secs.toFixed(1)} s.`;
+  $('#flCsv').hidden = !dl || !ev.length;
+}
+$('#flTable').addEventListener('click', e => { const tr = e.target.closest('tr[data-o]'); if (!tr) return; const ev = buildEvent(+tr.dataset.s, +tr.dataset.o, +tr.dataset.tca); if (ev) select(ev, true); });
+$('#flChips').addEventListener('click', e => { const b = e.target.closest('[data-rm]'); if (!b) return; fleet = fleet.filter(id => id !== b.dataset.rm); saveFleet(); renderFleet(); checkAlerts(); });
+$('#fq2').addEventListener('input', () => { const q = $('#fq2').value.trim().toLowerCase(), box = $('#sugg2'); if (q.length < 2 || !RECS) { box.style.display = 'none'; return; } const hits = []; for (const r of RECS) { if (r.group !== 'debris' && (r.name.toLowerCase().includes(q) || r.id === q)) { hits.push(r); if (hits.length > 12) break; } } box.innerHTML = hits.map(r => `<button type="button" data-id="${r.id}">${esc(r.name)}<span>#${r.id} · ${GROUPS[r.group][0]}</span></button>`).join('') || '<div class="empty" style="padding:10px 12px">No match</div>'; box.style.display = 'block'; });
+$('#sugg2').addEventListener('click', e => { const b = e.target.closest('button[data-id]'); if (!b) return; if (!fleet.includes(b.dataset.id)) fleet.push(b.dataset.id); saveFleet(); $('#fq2').value = ''; $('#sugg2').style.display = 'none'; renderFleet(); checkAlerts(); });
+document.addEventListener('click', e => { if (!e.target.closest('#sugg2') && e.target.id !== 'fq2') $('#sugg2').style.display = 'none'; });
+$('#flGo').addEventListener('click', () => {
+  const idx = fleetIdx(); if (!idx.length) return; const hours = +$('#fw2').value, thresh = +$('#fl2').value, t0 = Math.max(META.t0, Math.min(simT, META.t0 + 24 * 3600e3 - hours * 3600e3)), t1 = performance.now();
+  $('#flStat').textContent = `Screening ${idx.length} satellites against everything in their altitude bands…`; $('#flProg').hidden = false; $('#flGo').disabled = true;
+  checkWorker.onmessage = e => {
+    if (e.data.progress !== undefined) { $('#flProg i').style.width = `${e.data.progress * 100}%`; return; } if (!e.data.screened) return;
+    const set = new Set(idx); $('#flProg').hidden = true; $('#flGo').disabled = false;
+    fleetScreen = { at: Date.now(), hours, thresh, secs: (performance.now() - t1) / 1000, events: e.data.res.events.filter(x => set.has(x.a) || set.has(x.b)).map(x => ({ s: set.has(x.a) ? x.a : x.b, o: set.has(x.a) ? x.b : x.a, t: x.t, miss: x.miss, vrel: x.vrel, alt: x.alt, src: 'fleet' })) };
+    store.set('scw.fleetScreen', fleetScreen); renderFleet(); checkAlerts();
+  };
+  checkWorker.postMessage({ screen: { t0, hours, step: 20, thresh, subject: idx } });
+});
+$('#flCsv').addEventListener('click', e => save('my-fleet-passes.csv', csv([['your_satellite', 'norad', 'other_object', 'other_norad', 'other_group', 'tca_utc', 'miss_m', 'closing_km_s', 'altitude_km']].concat(fleetEvents().map(x => [RECS[x.s].name, RECS[x.s].id, RECS[x.o].name, RECS[x.o].id, RECS[x.o].group, new Date(x.t).toISOString(), (x.miss * 1000).toFixed(1), x.vrel.toFixed(3), x.alt.toFixed(1)]))), e.currentTarget));
+// alerts: any fleet pass under 2 km within the next hour of the sim clock
+let alertDismissed = '';
+function checkAlerts() {
+  if (!RECS || !fleet) return; const soon = fleetEvents().filter(x => x.t > simT && x.t - simT < 3600e3 && x.miss < 5).sort((a, b) => a.t - b.t);
+  const bar = $('#alertbar'); if (!soon.length) { bar.hidden = true; return; }
+  const x = soon[0], key = `${x.s}-${x.o}-${Math.round(x.t / 1000)}`; if (alertDismissed === key) { bar.hidden = true; return; }
+  bar.hidden = false; bar.innerHTML = `<span>Alert: <b>${esc(RECS[x.s].name)}</b> passes <b>${esc(RECS[x.o].name)}</b>${RECS[x.o].group === 'debris' ? ' (debris)' : ''} at <b>${fmtKm(x.miss)}</b> <span data-t="${x.t}">${fmtIn(x.t - simT)}</span>${soon.length > 1 ? `, and ${soon.length - 1} more within the hour` : ''}.</span><button data-go>Open it</button><button data-x style="background:none;color:#ffd9d3">Dismiss</button>`;
+  bar.dataset.k = key; bar.dataset.s = x.s; bar.dataset.o = x.o; bar.dataset.t0 = x.t;
+}
+$('#alertbar').addEventListener('click', e => { const bar = $('#alertbar'); if (e.target.closest('[data-x]')) { alertDismissed = bar.dataset.k; bar.hidden = true; } if (e.target.closest('[data-go]')) { const ev = buildEvent(+bar.dataset.s, +bar.dataset.o, +bar.dataset.t0); if (ev) select(ev, true); } });
+setInterval(checkAlerts, 5000);
+
+// ---------- router ----------
+const VIEWS = ['watch', 'conjunctions', 'encounter', 'check', 'fleet', 'watchlist', 'method'];
+function route() {
+  const v = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'watch';
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('on', s.id === v));
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
+  if (!META) return;
+  if (v === 'watch') { requestAnimationFrame(resize); renderList(); }
+  if (v === 'conjunctions') renderCj();
+  if (v === 'encounter') { if (!sel) { const s = upcoming(1)[0]; if (s) select(s); } requestAnimationFrame(renderEnc); }
+  if (v === 'check') renderCheck();
+  if (v === 'watchlist') renderWl();
+  if (v === 'fleet') renderFleet();
+  if (v === 'method') $('#mData').textContent = `${RECS.length.toLocaleString()} objects from CelesTrak's public element sets, taken from a public mirror around ${fmtUTC(META.t0).slice(0, 16)}: CelesTrak's full active-satellite list plus the tracked debris from the Fengyun-1C, Cosmos 2251 and Iridium 33 breakups. Every record passed its checksum, duplicates across groups were removed, and elements more than two weeks old were dropped. Spent rocket bodies and other debris clouds are not included.`;
+  window.scrollTo(0, 0);
+}
+addEventListener('hashchange', route);
+}
+</script>
+</body>
+</html>

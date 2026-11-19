@@ -1,0 +1,8 @@
+{
+  "name": "satellite-collision-watch",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Conjunction screening for the public satellite catalogue, in the browser",
+  "scripts": { "prepare-catalog": "node tools/prepare-catalog.js", "screen": "node tools/screen-catalog.js" },
+  "dependencies": { "satellite.js": "^5.0.0", "topojson-client": "^3.1.0", "world-atlas": "^2.0.2" }
+}
