@@ -20,12 +20,18 @@ for r in rows:
     tca = dt.datetime.fromisoformat(r['TCA'].strip().replace(' ', 'T')).replace(tzinfo=dt.timezone.utc)
     rng = float(r['TCA_RANGE'])
     if not (t0 <= tca <= t1) or rng > ours['thresh'] or n1 not in ids or n2 not in ids: continue
+    r['_slow'] = float(r['TCA_RELATIVE_SPEED']) < 0.1    # formation flying: our screen skips these on purpose
     inwin.append(r); hits = [(abs((t - tca).total_seconds()), m) for t, m in O.get(tuple(sorted((n1, n2))), [])]
     best = min(hits) if hits else None
-    if best and best[0] < 60: matched += 1; diffs.append((best[0], abs(best[1] - rng)))
-    else: missed.append(dict(pair=[n1, n2], tca=tca.isoformat(), range_km=rng))
-res = dict(window=[t0.isoformat(), t1.isoformat()], socrates_events_in_window=len(inwin), found_by_us=matched,
+    if best and best[0] < 60: matched += 1; r['_hit'] = True; diffs.append((best[0], abs(best[1] - rng)))
+    else: r['_hit'] = False; missed.append(dict(pair=[n1, n2], tca=tca.isoformat(), range_km=rng, rel_speed=float(r['TCA_RELATIVE_SPEED'])))
+fast = [r for r in inwin if not r['_slow']]
+under1 = [r for r in fast if float(r['TCA_RANGE']) < 1]
+res = dict(window=[t0.isoformat(), t1.isoformat()],
+           crossing_events=len(fast), crossing_found=sum(r['_hit'] for r in fast), crossing_recall=sum(r['_hit'] for r in fast) / max(1, len(fast)),
+           crossing_under_1km=len(under1), crossing_under_1km_found=sum(r['_hit'] for r in under1),
+           formation_events_skipped_by_design=len(inwin) - len(fast), socrates_events_in_window=len(inwin), found_by_us=matched,
            recall=matched / max(1, len(inwin)), tca_diff_s_median=sorted(d[0] for d in diffs)[len(diffs) // 2] if diffs else None,
            range_diff_km_median=sorted(d[1] for d in diffs)[len(diffs) // 2] if diffs else None,
-           range_diff_km_p95=sorted(d[1] for d in diffs)[int(len(diffs) * 0.95)] if diffs else None, missed=missed[:50])
+           range_diff_km_p95=sorted(d[1] for d in diffs)[int(len(diffs) * 0.95)] if diffs else None, missed=[x for x in missed if x['rel_speed'] >= 0.1][:50])
 print(json.dumps(res, indent=1)); json.dump(res, open(sys.argv[3], 'w'), indent=1)
