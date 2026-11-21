@@ -4,7 +4,9 @@ python3 tools/socrates_compare.py events_24h.json cat.json out.json"""
 import csv, io, json, sys, urllib.request, datetime as dt
 ours, cat = json.load(open(sys.argv[1])), json.load(open(sys.argv[2]))
 ids = [c[1][2:7].strip().lstrip('0') for c in cat]
-t0 = dt.datetime.fromisoformat(ours['t0'].replace('Z', '+00:00')); t1 = t0 + dt.timedelta(hours=ours['hours'])
+t0 = dt.datetime.fromisoformat(ours['t0'].replace('Z', '+00:00'))
+if t0.tzinfo is None: t0 = t0.replace(tzinfo=dt.timezone.utc)
+t1 = t0 + dt.timedelta(hours=ours['hours'])
 raw = urllib.request.urlopen(urllib.request.Request('https://celestrak.org/SOCRATES/sort-minRange.csv', headers={'User-Agent': 'satellite-collision-watch'}), timeout=120).read().decode()
 rows = list(csv.DictReader(io.StringIO(raw)))
 print('SOCRATES columns:', list(rows[0].keys()) if rows else 'none')
