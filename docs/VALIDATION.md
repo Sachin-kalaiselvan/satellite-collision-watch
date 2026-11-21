@@ -50,6 +50,28 @@ python3 bench/screen_ref.py cat.json 2026-11-19T17:30:00Z 2 5 bench/out/ref_2h.j
 python3 bench/compare_screen.py bench/out/ours_2h.json bench/out/ref_2h.json
 ```
 
+## 3. Against a live operational product: CelesTrak SOCRATES (daily, on GitHub)
+
+`.github/workflows/daily.yml` runs every day on GitHub's servers. It:
+1. downloads the current catalogue from CelesTrak, about 30,000 objects including debris;
+2. screens the next 24 hours with the brute-force screener (5 minutes);
+3. compares the result with SOCRATES, CelesTrak's public conjunction report;
+4. saves the comparison in `data/history/`.
+
+First run, 21–22 Nov 2026, passes under 5 km:
+
+| | Result |
+|---|---|
+| SOCRATES crossings in the window | 12,752 (plus 200 formation pairs, which we skip by design) |
+| Also found by our screen | 6,562 (51%) |
+| SOCRATES crossings under 1 km | 523, of which we found 311 (59%) |
+| Same event found by both: time of closest approach | median difference 0.11 s |
+| Same event found by both: miss distance | median difference 0.31 km, 95th percentile 2.4 km |
+
+Where both screens see the same encounter, they agree closely. But half of SOCRATES' crossings are not in our list at all, including some it puts at tens of metres.
+
+Our screen finds 99.8% of what our own data contains (section 2), so the gap must come from the input data. The likely cause is not yet confirmed: SOCRATES may use element sets we do not, such as operator-supplied supplemental GP data for constellations like Starlink, or element sets fetched at a different time of day. That is the next thing to test. The daily history will show whether the gap is stable.
+
 ## What this does not show
 
 - **TLE accuracy.** Public two-line elements are typically off by hundreds of metres to a few kilometres after a day, more for debris and manoeuvring satellites. These checks prove the screen is faithful to the TLEs, not that the TLEs are right. Operators screen with owner ephemerides and covariance from the Space Force's 18th Space Defense Squadron or a commercial provider.
