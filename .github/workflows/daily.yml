@@ -1,0 +1,27 @@
+name: daily screen
+on:
+  schedule: [{ cron: '17 1 * * *' }]
+  workflow_dispatch:
+permissions: { contents: write }
+jobs:
+  screen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - run: pip install sgp4 numpy scipy
+      - name: Fetch today's catalogue from CelesTrak
+        run: python3 tools/fetch_catalog.py data/cat_today.json
+      - name: Screen the next 24 hours (passes under 5 km)
+        run: |
+          T0=$(date -u +%Y-%m-%dT%H:%M:00)
+          python3 bench/screen_ref.py data/cat_today.json $T0 24 5 data/screen_today.json
+      - name: Compare with CelesTrak SOCRATES
+        run: python3 tools/socrates_compare.py data/screen_today.json data/cat_today.json data/socrates_today.json
+      - name: Keep the result
+        run: |
+          mkdir -p data/history && cp data/socrates_today.json data/history/$(date -u +%Y-%m-%d).json
+          git config user.name "daily-screen" && git config user.email "actions@users.noreply.github.com"
+          git add data/history data/socrates_today.json && git commit -m "Daily screen $(date -u +%Y-%m-%d)" && git push || echo "nothing to commit"
