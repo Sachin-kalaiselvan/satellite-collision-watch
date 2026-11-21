@@ -1,0 +1,8 @@
+reference events 3718, ours 3704
+recall 3712/3718 = 99.84%   precision 3694/3704 = 99.73%
+miss distance agreement: median 0.040 m, 99th pct 0.237 m, max 1174.719 m
+time of closest approach agreement: median 1.000 ms, max 7073.147 ms
+same-encounter matches (TCA within 1 s): 3693, miss distance diff median 0.040 m, max 0.676 m
+recall for passes under 1 km: 94/94
+missed (closest first): [((16887, 16901), 1863, 3.495), ((202, 17377), 5931, 3.875), ((202, 17377), 5938, 3.922), ((202, 17377), 5948, 4.195), ((16887, 16901), 1873, 4.671), ((1227, 10175), 5443, 4.705)]
+missed by miss distance (km) under 1/2/5: 0 0 6

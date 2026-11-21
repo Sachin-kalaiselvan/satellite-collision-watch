@@ -10,6 +10,13 @@ Screens the public satellite catalogue (about 18,500 objects, including tracked 
 - **My fleet.** Pick satellites to watch; passes under 5 km within the hour raise an alert.
 - **Exports.** Results as CSV and an encounter report as PDF.
 
+## Validation
+
+Checked against independent references. Full method and numbers are in [docs/VALIDATION.md](docs/VALIDATION.md).
+
+- **Propagation:** matches Vallado's official SGP4 verification set to 0.12 mm over 666 reference states.
+- **Screening:** a separate brute-force screen with Vallado's C++ SGP4 and a k-d tree at 4× finer time steps ran over the whole catalogue for 2 hours. The app found 99.84% of its 3,718 passes under 5 km, and all 94 under 1 km. Miss distances agree to a median of 4 cm.
+
 ## Data
 
 `cat.json` is a snapshot of public two-line element sets; `events.json` is a precomputed 24-hour screening. To refresh:

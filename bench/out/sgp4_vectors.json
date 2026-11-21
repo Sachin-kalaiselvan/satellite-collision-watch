@@ -1,0 +1,233 @@
+[
+ {
+  "sat": "5",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000006819206706052019,
+  "maxVelErr_mps": 7.70480217497559e-7
+ },
+ {
+  "sat": "4632",
+  "points": 5,
+  "failed": 0,
+  "maxPosErr_m": 0.000005971630012994096,
+  "maxVelErr_mps": 6.520349240499199e-7
+ },
+ {
+  "sat": "6251",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.000007266465865791276,
+  "maxVelErr_mps": 6.893817396127629e-7
+ },
+ {
+  "sat": "8195",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.000006274200664525554,
+  "maxVelErr_mps": 6.700856207759221e-7
+ },
+ {
+  "sat": "9880",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.000007024619617519411,
+  "maxVelErr_mps": 8.528685513976665e-7
+ },
+ {
+  "sat": "9998",
+  "points": 14,
+  "failed": 0,
+  "maxPosErr_m": 0.000007892990544801976,
+  "maxVelErr_mps": 7.539594004259457e-7
+ },
+ {
+  "sat": "11801",
+  "points": 5,
+  "failed": 0,
+  "maxPosErr_m": 0.000006882190052985548,
+  "maxVelErr_mps": 5.387525827649614e-7
+ },
+ {
+  "sat": "14128",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.0000069593571978886065,
+  "maxVelErr_mps": 6.782373018671541e-7
+ },
+ {
+  "sat": "16925",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000008095697414690561,
+  "maxVelErr_mps": 6.66114051404559e-7
+ },
+ {
+  "sat": "20413",
+  "points": 26,
+  "failed": 0,
+  "maxPosErr_m": 0.000007763900709302775,
+  "maxVelErr_mps": 7.353201006686177e-7
+ },
+ {
+  "sat": "21897",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.00000758618728136768,
+  "maxVelErr_mps": 6.628252936350215e-7
+ },
+ {
+  "sat": "22312",
+  "points": 23,
+  "failed": 0,
+  "maxPosErr_m": 0.000006469873266902579,
+  "maxVelErr_mps": 6.752305782963106e-7
+ },
+ {
+  "sat": "22674",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.0000072442362308627585,
+  "maxVelErr_mps": 7.649746003357163e-7
+ },
+ {
+  "sat": "23177",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000007118343732320021,
+  "maxVelErr_mps": 7.496064622371893e-7
+ },
+ {
+  "sat": "23333",
+  "points": 15,
+  "failed": 0,
+  "maxPosErr_m": 0.00000706901502481523,
+  "maxVelErr_mps": 6.865470701198133e-7
+ },
+ {
+  "sat": "23599",
+  "points": 37,
+  "failed": 0,
+  "maxPosErr_m": 0.000007678012839314649,
+  "maxVelErr_mps": 7.312604890042119e-7
+ },
+ {
+  "sat": "24208",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.0000065158051390401126,
+  "maxVelErr_mps": 6.54992234212401e-7
+ },
+ {
+  "sat": "25954",
+  "points": 26,
+  "failed": 0,
+  "maxPosErr_m": 0.0000075478581585335785,
+  "maxVelErr_mps": 7.373485141004649e-7
+ },
+ {
+  "sat": "26900",
+  "points": 4,
+  "failed": 0,
+  "maxPosErr_m": 0.000005405881563149735,
+  "maxVelErr_mps": 4.5560857472166683e-7
+ },
+ {
+  "sat": "26975",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.000007624644193403025,
+  "maxVelErr_mps": 8.020892242539947e-7
+ },
+ {
+  "sat": "28057",
+  "points": 25,
+  "failed": 0,
+  "maxPosErr_m": 0.000006768475064647233,
+  "maxVelErr_mps": 6.893975142886418e-7
+ },
+ {
+  "sat": "28129",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000007330376034693548,
+  "maxVelErr_mps": 6.581260872888353e-7
+ },
+ {
+  "sat": "28350",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.0000063417336027430295,
+  "maxVelErr_mps": 6.852802896172791e-7
+ },
+ {
+  "sat": "28623",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000006159446910209455,
+  "maxVelErr_mps": 6.284107677100809e-7
+ },
+ {
+  "sat": "28626",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.0000070049587433815975,
+  "maxVelErr_mps": 7.093296656051026e-7
+ },
+ {
+  "sat": "28872",
+  "points": 11,
+  "failed": 0,
+  "maxPosErr_m": 0.000007313530256722552,
+  "maxVelErr_mps": 6.705853504399134e-7
+ },
+ {
+  "sat": "29141",
+  "points": 22,
+  "failed": 0,
+  "maxPosErr_m": 0.000006672986149249655,
+  "maxVelErr_mps": 7.775851289712372e-7
+ },
+ {
+  "sat": "29238",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000007090778811912148,
+  "maxVelErr_mps": 7.702219874153532e-7
+ },
+ {
+  "sat": "88888",
+  "points": 13,
+  "failed": 0,
+  "maxPosErr_m": 0.000006393689033861506,
+  "maxVelErr_mps": 7.083083577876004e-7
+ },
+ {
+  "sat": "33333",
+  "points": 5,
+  "failed": 0,
+  "maxPosErr_m": 0.000007087980619934126,
+  "maxVelErr_mps": 6.641024075905449e-7
+ },
+ {
+  "sat": "33334",
+  "points": 1,
+  "failed": 1,
+  "maxPosErr_m": 0,
+  "maxVelErr_mps": 0
+ },
+ {
+  "sat": "33335",
+  "points": 73,
+  "failed": 0,
+  "maxPosErr_m": 0.000008121826864374134,
+  "maxVelErr_mps": 7.669059131918624e-7
+ },
+ {
+  "sat": "20413",
+  "points": 70,
+  "failed": 0,
+  "maxPosErr_m": 0.00011708084947102836,
+  "maxVelErr_mps": 7.618745175588683e-7
+ }
+]
