@@ -13,7 +13,7 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install sgp4 numpy scipy
       - name: Fetch today's catalogue from CelesTrak
-        run: python3 tools/fetch_catalog.py data/cat_today.json
+        run: mkdir -p data && python3 tools/fetch_catalog.py data/cat_today.json
       - name: Screen the next 24 hours (passes under 5 km)
         run: |
           T0=$(date -u +%Y-%m-%dT%H:%M:00)
