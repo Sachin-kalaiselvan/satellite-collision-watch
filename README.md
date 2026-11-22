@@ -1,33 +1,34 @@
-# Satellite Collision Watch
+# satellite-collision-watch
 
-Screens the public satellite catalogue (about 18,500 objects, including tracked debris) for close approaches over the next day, in the browser.
+screens the whole public satellite catalogue (~18,500 objects, tracked debris included) for close approaches over the next day. in the browser.
 
-## What is in it
+## what's in it
 
-- **SGP4 propagation** of every object with satellite.js.
-- **Conjunction screening.** A spatial-hash sieve at 20 s steps finds candidate pairs; golden-section search refines the time of closest approach; miss distance is split into radial, along-track and cross-track components.
-- **Collision probability estimate** and a **Clohessy–Wiltshire burn planner** for an avoidance manoeuvre.
-- **My fleet.** Pick satellites to watch; passes under 5 km within the hour raise an alert.
-- **Exports.** Results as CSV and an encounter report as PDF.
+- **SGP4 propagation** for every object via satellite.js
+- **conjunction screening.** spatial-hash sieve at 20s steps finds candidate pairs, golden-section search nails the time of closest approach, miss distance split into radial / along-track / cross-track
+- **collision probability estimate** + a **clohessy-wiltshire burn planner** for an avoidance manoeuvre
+- **my fleet.** pick the sats you care about, anything passing under 5 km in the next hour throws an alert
+- **exports.** CSV results + an encounter report PDF
 
-## Validation
+## is it right though
 
-Checked against independent references. Full method and numbers are in [docs/VALIDATION.md](docs/VALIDATION.md).
+checked against stuff that shares no code with it. full numbers in [docs/VALIDATION.md](docs/VALIDATION.md).
 
-- **Propagation:** matches Vallado's official SGP4 verification set to 0.12 mm over 666 reference states.
-- **Screening:** a separate brute-force screen with Vallado's C++ SGP4 and a k-d tree at 4× finer time steps ran over the whole catalogue for 2 hours. The app found 99.84% of its 3,718 passes under 5 km, and all 94 under 1 km. Miss distances agree to a median of 4 cm.
+- **propagation:** matches vallado's official SGP4 verification set to **0.12 mm** across 666 reference states
+- **screening:** separate brute-force screen using vallado's C++ SGP4 + a k-d tree at 4× finer steps, whole catalogue, 2 hours. app found **99.84%** of its 3,718 passes under 5 km and **all 94** under 1 km. miss distances agree to a median of 4 cm
+- **vs SOCRATES** (celestrak's public conjunction report): a github action runs daily, grabs today's catalogue, screens 24h and compares. where both list the same encounter, timing agrees to 0.11s and distance to 0.3 km (median). but only 51% of SOCRATES' crossings show up in mine, most likely because it's fed different input data. not confirmed yet, it's tracked daily in `data/history/`
 
-- **Against SOCRATES** (CelesTrak's public conjunction report): a daily job on GitHub downloads today's catalogue, screens 24 hours and compares. Where both screens list the same encounter, timing agrees to 0.11 s and distance to 0.3 km (median). But only 51% of SOCRATES' crossings appear in ours, most likely because it uses different input data. Not yet confirmed; tracked daily in `data/history/`.
+## data
 
-## Data
+`cat.json` is a snapshot of public TLEs, `events.json` is a precomputed 24h screen. to refresh:
 
-`cat.json` is a snapshot of public two-line element sets; `events.json` is a precomputed 24-hour screening. To refresh:
-
-```
+```bash
 npm install
 node tools/prepare-catalog.js path/to/celestrak/tle   # writes cat.json
-node tools/screen-catalog.js 24 events.json 1         # 24 h, passes under 1 km
+node tools/screen-catalog.js 24 events.json 1         # 24h, passes under 1 km
 python3 build.py                                      # rebuild index.html from src/
 ```
 
-Not for operational use: public element sets are not accurate enough for real collision-avoidance decisions.
+don't use this for real ops. public element sets just aren't accurate enough to make actual collision-avoidance calls.
+
+MIT
