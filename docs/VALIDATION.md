@@ -58,7 +58,7 @@ python3 bench/compare_screen.py bench/out/ours_2h.json bench/out/ref_2h.json
 3. compares against SOCRATES, celestrak's public conjunction report
 4. saves the comparison in `data/history/`
 
-first run, 21–22 nov 2026, passes under 5 km:
+first run, 21-22 nov 2026, passes under 5 km:
 
 | | result |
 |---|---|
